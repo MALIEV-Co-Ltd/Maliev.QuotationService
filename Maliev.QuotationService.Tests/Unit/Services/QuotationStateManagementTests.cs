@@ -1,0 +1,131 @@
+using FluentAssertions;
+using Maliev.QuotationService.Api.Services;
+using Maliev.QuotationService.Data;
+using Maliev.QuotationService.Data.Entities;
+using Maliev.QuotationService.Data.Enums;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+
+namespace Maliev.QuotationService.Tests.Unit.Services;
+
+public class QuotationStateManagementTests
+{
+    private readonly Mock<ILogger<Api.Services.QuotationService>> _mockLogger;
+    private readonly QuotationDbContext _context;
+    private readonly Api.Services.QuotationService _quotationService;
+
+    public QuotationStateManagementTests()
+    {
+        var options = new DbContextOptionsBuilder<QuotationDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+
+        _context = new QuotationDbContext(options);
+        _mockLogger = new Mock<ILogger<Api.Services.QuotationService>>();
+        _quotationService = new Api.Services.QuotationService(_context, _mockLogger.Object);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_ValidTransition_UpdatesStatus()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = "customer@example.com",
+            Name = "Test Customer",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var quotation = new Quotation
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Status = QuotationStatus.Draft,
+            ValidityPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
+            ValidityPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.Customers.Add(customer);
+        _context.Quotations.Add(quotation);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _quotationService.UpdateStatusAsync(
+            quotation.Id,
+            QuotationStatus.PendingApproval,
+            "test-user");
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Status.Should().Be(QuotationStatus.PendingApproval);
+
+        // Verify audit log was created
+        var auditLog = await _context.AuditLogEntries
+            .FirstOrDefaultAsync(a => a.EntityId == quotation.Id && a.ActionType == AuditActionType.Update);
+        auditLog.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_InvalidTransition_ThrowsException()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = "customer@example.com",
+            Name = "Test Customer",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var quotation = new Quotation
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Status = QuotationStatus.Draft,
+            ValidityPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
+            ValidityPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.Customers.Add(customer);
+        _context.Quotations.Add(quotation);
+        await _context.SaveChangesAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await _quotationService.UpdateStatusAsync(
+                quotation.Id,
+                QuotationStatus.Accepted, // Invalid: Can't go from Draft to Accepted
+                "test-user");
+        });
+    }
+
+    [Theory]
+    [InlineData(QuotationStatus.Draft, QuotationStatus.PendingApproval, true)]
+    [InlineData(QuotationStatus.Draft, QuotationStatus.Cancelled, true)]
+    [InlineData(QuotationStatus.PendingApproval, QuotationStatus.Approved, true)]
+    [InlineData(QuotationStatus.Approved, QuotationStatus.CustomerReview, true)]
+    [InlineData(QuotationStatus.CustomerReview, QuotationStatus.Accepted, true)]
+    [InlineData(QuotationStatus.Draft, QuotationStatus.Accepted, false)]
+    [InlineData(QuotationStatus.Cancelled, QuotationStatus.Draft, false)]
+    [InlineData(QuotationStatus.Accepted, QuotationStatus.Draft, false)]
+    public void QuotationStateMachine_ValidateTransitions_ReturnsExpectedResult(
+        QuotationStatus from,
+        QuotationStatus to,
+        bool expectedValid)
+    {
+        // Act
+        var isValid = QuotationStateMachine.IsValidTransition(from, to);
+
+        // Assert
+        isValid.Should().Be(expectedValid);
+    }
+}

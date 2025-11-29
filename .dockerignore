@@ -1,0 +1,112 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build artifacts
+bin/
+obj/
+out/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Test projects and results
+**/*Tests/
+**/*.Tests/
+**/Tests/
+TestResults/
+*.trx
+*.coverage
+coverage/
+
+# Specifications and documentation
+specs/
+*.md
+!README.md
+docs/
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+azure-pipelines.yml
+.circleci/
+.travis.yml
+Jenkinsfile
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+*.DotSettings.user
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.*
+*.secrets
+
+# Docker files (don't need these in the image)
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+[Tt]mp/
+[Tt]emp/
+
+# Node modules (if any frontend tooling)
+node_modules/
+npm-debug.log*
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Local configuration
+appsettings.*.json
+!appsettings.json
+
+# JetBrains Rider
+*.sln.iml
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
+
+# Entity Framework Migrations (generated, will be baked into image from source)
+# Uncomment if migrations should be excluded:
+# **/Migrations/
+
+# Miscellaneous
+*.cache
+*.vsidx
+*.vspscc
+.suo

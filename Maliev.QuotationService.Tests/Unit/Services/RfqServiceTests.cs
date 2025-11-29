@@ -1,0 +1,175 @@
+using FluentAssertions;
+using Maliev.QuotationService.Api.Services;
+using Maliev.QuotationService.Api.Services.Interfaces;
+using Maliev.QuotationService.Data;
+using Maliev.QuotationService.Data.Entities;
+using Maliev.QuotationService.Data.Enums;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+
+namespace Maliev.QuotationService.Tests.Unit.Services;
+
+public class RfqServiceTests
+{
+    private readonly DbContextOptions<QuotationDbContext> _dbContextOptions;
+    private readonly Mock<ILogger<RfqService>> _mockLogger;
+
+    public RfqServiceTests()
+    {
+        _dbContextOptions = new DbContextOptionsBuilder<QuotationDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+
+        _mockLogger = new Mock<ILogger<RfqService>>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_ValidRequest_CreatesRfq()
+    {
+        // Arrange
+        await using var context = new QuotationDbContext(_dbContextOptions);
+        var service = new RfqService(context, _mockLogger.Object);
+
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            Name = "Test Customer",
+            PhoneNumber = "+66123456789",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        await context.Customers.AddAsync(customer);
+        await context.SaveChangesAsync();
+
+        // Act
+        var rfq = await service.CreateAsync(
+            customerId: customer.Id,
+            channelSource: RfqChannel.Website,
+            requestDetails: new { description = "Test request" },
+            uploadServiceFileIds: null,
+            currentUserId: "test-user"
+        );
+
+        // Assert
+        rfq.Should().NotBeNull();
+        rfq.CustomerId.Should().Be(customer.Id);
+        rfq.ChannelSource.Should().Be(RfqChannel.Website);
+        rfq.Status.Should().Be(RfqStatus.New);
+        rfq.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+
+        var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
+        savedRfq.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ValidRfq_UpdatesDetails()
+    {
+        // Arrange
+        await using var context = new QuotationDbContext(_dbContextOptions);
+        var service = new RfqService(context, _mockLogger.Object);
+
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            Name = "Test Customer",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        var rfq = new Rfq
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            ChannelSource = RfqChannel.Website,
+            Status = RfqStatus.New,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await context.Customers.AddAsync(customer);
+        await context.Rfqs.AddAsync(rfq);
+        await context.SaveChangesAsync();
+
+        // Capture original UpdatedAt before update
+        var originalUpdatedAt = rfq.UpdatedAt;
+
+        // Small delay to ensure UpdatedAt timestamp will be different
+        await Task.Delay(10);
+
+        var newRequestDetails = new { description = "Updated request details" };
+
+        // Act
+        var updated = await service.UpdateAsync(
+            rfqId: rfq.Id,
+            requestDetails: newRequestDetails,
+            assignedStaffUserId: "staff-123",
+            currentUserId: "test-user"
+        );
+
+        // Assert
+        updated.Should().NotBeNull();
+        updated.AssignedStaffUserId.Should().Be("staff-123");
+        updated.UpdatedAt.Should().BeAfter(originalUpdatedAt);
+
+        var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
+        savedRfq!.AssignedStaffUserId.Should().Be("staff-123");
+    }
+
+    [Fact]
+    public async Task AssignAsync_ValidStaffUser_AssignsRfq()
+    {
+        // Arrange
+        await using var context = new QuotationDbContext(_dbContextOptions);
+        var service = new RfqService(context, _mockLogger.Object);
+
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            Name = "Test Customer",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        var rfq = new Rfq
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            ChannelSource = RfqChannel.Email,
+            Status = RfqStatus.New,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await context.Customers.AddAsync(customer);
+        await context.Rfqs.AddAsync(rfq);
+        await context.SaveChangesAsync();
+
+        var staffUserId = "staff-456";
+
+        // Act
+        var assigned = await service.AssignAsync(
+            rfqId: rfq.Id,
+            assignedStaffUserId: staffUserId,
+            currentUserId: "manager-789"
+        );
+
+        // Assert
+        assigned.Should().NotBeNull();
+        assigned.AssignedStaffUserId.Should().Be(staffUserId);
+
+        var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
+        savedRfq!.AssignedStaffUserId.Should().Be(staffUserId);
+
+        // Verify audit log entry was created
+        var auditEntry = await context.AuditLogEntries
+            .Where(a => a.EntityType == AuditEntityType.RFQ && a.EntityId == rfq.Id)
+            .OrderByDescending(a => a.Timestamp)
+            .FirstOrDefaultAsync();
+
+        auditEntry.Should().NotBeNull();
+        auditEntry!.ActionType.Should().Be(AuditActionType.Update);
+        auditEntry.UserId.Should().Be("manager-789");
+    }
+}

@@ -1,0 +1,446 @@
+using Asp.Versioning;
+using Maliev.QuotationService.Api.DTOs.Requests;
+using Maliev.QuotationService.Api.DTOs.Responses;
+using Maliev.QuotationService.Api.Services.Interfaces;
+using Maliev.QuotationService.Api.Services.Metrics;
+using Maliev.QuotationService.Data;
+using Maliev.QuotationService.Data.Entities;
+using Maliev.QuotationService.Data.Enums;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using System.Text.Json;
+
+namespace Maliev.QuotationService.Api.Controllers.v1;
+
+[ApiController]
+[ApiVersion("1.0")]
+[Route("quotation/v{version:apiVersion}/quotations")]
+[Authorize(Policy = "EmployeeOrHigher")]
+public class QuotationController : ControllerBase
+{
+    private readonly IQuotationService _quotationService;
+    private readonly QuotationDbContext _context;
+    private readonly ILogger<QuotationController> _logger;
+
+    public QuotationController(
+        IQuotationService quotationService,
+        QuotationDbContext context,
+        ILogger<QuotationController> logger)
+    {
+        _quotationService = quotationService;
+        _context = context;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Create a new quotation
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<QuotationResponse>> CreateQuotation(
+        [FromBody] CreateQuotationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+        try
+        {
+            var quotation = await _quotationService.CreateAsync(
+                customerId: request.CustomerId,
+                sourceRfqId: request.SourceRfqId,
+                validityPeriodStart: request.ValidityPeriodStart,
+                validityPeriodEnd: request.ValidityPeriodEnd,
+                lineItems: request.LineItems,
+                deliveryExpectations: request.DeliveryExpectations,
+                currentUserId: currentUserId,
+                discountStructure: request.DiscountStructure,
+                cancellationToken: cancellationToken);
+
+            // Reload with full data
+            var fullQuotation = await _quotationService.GetByIdAsync(quotation.Id, cancellationToken);
+            var response = await MapToResponseAsync(fullQuotation!, cancellationToken);
+
+            return CreatedAtAction(nameof(GetQuotationById), new { id = quotation.Id }, response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating quotation: {Message}", ex.Message);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Get all quotations with optional filtering
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(List<QuotationResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<QuotationResponse>>> GetQuotations(
+        [FromQuery] QuotationStatus? status = null,
+        [FromQuery] Guid? customerId = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var (quotations, totalCount) = await _quotationService.GetAllAsync(
+            status: status,
+            customerId: customerId,
+            fromDate: fromDate,
+            toDate: toDate,
+            page: page,
+            pageSize: pageSize,
+            cancellationToken: cancellationToken);
+
+        var responses = new List<QuotationResponse>();
+        foreach (var quotation in quotations)
+        {
+            responses.Add(await MapToResponseAsync(quotation, cancellationToken));
+        }
+
+        Response.Headers.Append("X-Total-Count", totalCount.ToString());
+        Response.Headers.Append("X-Page", page.ToString());
+        Response.Headers.Append("X-Page-Size", pageSize.ToString());
+
+        return Ok(responses);
+    }
+
+    /// <summary>
+    /// Get quotation by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuotationResponse>> GetQuotationById(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var quotation = await _quotationService.GetByIdAsync(id, cancellationToken);
+
+        if (quotation == null)
+        {
+            return NotFound(new { message = $"Quotation with ID {id} not found" });
+        }
+
+        var response = await MapToResponseAsync(quotation, cancellationToken);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Update quotation (creates new version)
+    /// </summary>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuotationResponse>> UpdateQuotation(
+        Guid id,
+        [FromBody] UpdateQuotationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+        try
+        {
+            await _quotationService.UpdateAsync(
+                quotationId: id,
+                lineItems: request.LineItems,
+                changeSummary: request.ChangeSummary,
+                deliveryExpectations: request.DeliveryExpectations,
+                discountStructure: request.DiscountStructure,
+                currentUserId: currentUserId,
+                cancellationToken: cancellationToken);
+
+            // Reload with full data
+            var updated = await _quotationService.GetByIdAsync(id, cancellationToken);
+            var response = await MapToResponseAsync(updated!, cancellationToken);
+
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Update quotation status
+    /// </summary>
+    [HttpPatch("{id}/status")]
+    [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuotationResponse>> UpdateQuotationStatus(
+        Guid id,
+        [FromBody] UpdateQuotationStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+        try
+        {
+            await _quotationService.UpdateStatusAsync(
+                quotationId: id,
+                status: request.Status,
+                currentUserId: currentUserId,
+                cancellationToken: cancellationToken);
+
+            // Reload with full data
+            var updated = await _quotationService.GetByIdAsync(id, cancellationToken);
+            var response = await MapToResponseAsync(updated!, cancellationToken);
+
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Approve a quotation (requires Manager role)
+    /// </summary>
+    [HttpPost("{id}/approve")]
+    [Authorize(Policy = "Manager")]
+    [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuotationResponse>> ApproveQuotation(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+        try
+        {
+            await _quotationService.ApproveAsync(
+                quotationId: id,
+                currentUserId: currentUserId,
+                cancellationToken: cancellationToken);
+
+            // Reload with full data
+            var updated = await _quotationService.GetByIdAsync(id, cancellationToken);
+            var response = await MapToResponseAsync(updated!, cancellationToken);
+
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Add an internal note to a quotation
+    /// </summary>
+    [HttpPost("{id}/notes")]
+    [ProducesResponseType(typeof(InternalNoteResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<InternalNoteResponse>> AddNoteToQuotation(
+        Guid id,
+        [FromBody] AddInternalNoteRequest request,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+        // Verify quotation exists
+        var quotation = await _quotationService.GetByIdAsync(id, cancellationToken);
+        if (quotation == null)
+        {
+            return NotFound(new { message = $"Quotation with ID {id} not found" });
+        }
+
+        // Create internal note
+        var note = new InternalNote
+        {
+            Id = Guid.NewGuid(),
+            QuotationId = id,
+            AuthorUserId = currentUserId,
+            Content = request.Content,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.InternalNotes.Add(note);
+
+        // Create audit log entry
+        var auditEntry = new AuditLogEntry
+        {
+            Id = Guid.NewGuid(),
+            EntityType = AuditEntityType.Quotation,
+            EntityId = id,
+            UserId = currentUserId,
+            ActionType = AuditActionType.Update,
+            Timestamp = DateTime.UtcNow,
+            ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+            {
+                NoteAdded = new { Content = request.Content.Substring(0, Math.Min(50, request.Content.Length)) + "..." }
+            }))
+        };
+
+        _context.AuditLogEntries.Add(auditEntry);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Emit metric
+        BusinessMetrics.InternalNotesCreatedTotal.Inc();
+
+        var response = new InternalNoteResponse
+        {
+            Id = note.Id,
+            AuthorUserId = note.AuthorUserId,
+            Content = note.Content,
+            CreatedAt = note.CreatedAt
+        };
+
+        return CreatedAtAction(nameof(GetQuotationById), new { id }, response);
+    }
+
+    /// <summary>
+    /// Get all versions of a quotation
+    /// </summary>
+    [HttpGet("{id}/versions")]
+    [ProducesResponseType(typeof(List<QuotationVersionResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<QuotationVersionResponse>>> GetQuotationVersions(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var versions = await _quotationService.GetVersionsAsync(id, cancellationToken);
+
+        if (!versions.Any())
+        {
+            return NotFound(new { message = $"No versions found for quotation {id}" });
+        }
+
+        var responses = versions.Select(MapVersionToResponse).ToList();
+
+        return Ok(responses);
+    }
+
+    /// <summary>
+    /// Get specific version of a quotation
+    /// </summary>
+    [HttpGet("{id}/versions/{versionNumber}")]
+    [ProducesResponseType(typeof(QuotationVersionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuotationVersionResponse>> GetQuotationVersion(
+        Guid id,
+        int versionNumber,
+        CancellationToken cancellationToken)
+    {
+        var version = await _quotationService.GetVersionByNumberAsync(id, versionNumber, cancellationToken);
+
+        if (version == null)
+        {
+            return NotFound(new { message = $"Version {versionNumber} not found for quotation {id}" });
+        }
+
+        var response = MapVersionToResponse(version);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Generate PDF for quotation
+    /// </summary>
+    [HttpPost("{id}/pdf")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GeneratePdf(
+        Guid id,
+        [FromQuery] int? versionNumber = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var pdfBytes = await _quotationService.GeneratePdfAsync(id, versionNumber, cancellationToken);
+
+            return File(pdfBytes, "application/pdf", $"quotation-{id}.pdf");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    private async Task<QuotationResponse> MapToResponseAsync(Data.Entities.Quotation quotation, CancellationToken cancellationToken)
+    {
+        // Get current version number
+        var currentVersion = quotation.Versions.FirstOrDefault(v => v.Id == quotation.CurrentVersionId);
+
+        return new QuotationResponse
+        {
+            Id = quotation.Id,
+            CustomerId = quotation.CustomerId,
+            Customer = quotation.Customer != null ? new CustomerDto
+            {
+                Id = quotation.Customer.Id,
+                Email = quotation.Customer.Email,
+                Name = quotation.Customer.Name,
+                PhoneNumber = quotation.Customer.PhoneNumber
+            } : null,
+            SourceRfqId = quotation.SourceRfqId,
+            CurrentVersionNumber = currentVersion?.VersionNumber ?? 0,
+            Status = quotation.Status,
+            ValidityPeriodStart = quotation.ValidityPeriodStart.ToDateTime(TimeOnly.MinValue),
+            ValidityPeriodEnd = quotation.ValidityPeriodEnd.ToDateTime(TimeOnly.MinValue),
+            CreatedAt = quotation.CreatedAt,
+            UpdatedAt = quotation.UpdatedAt
+        };
+    }
+
+    private static QuotationVersionResponse MapVersionToResponse(Data.Entities.QuotationVersion version)
+    {
+        return new QuotationVersionResponse
+        {
+            Id = version.Id,
+            VersionNumber = version.VersionNumber,
+            LineItems = version.LineItems.Select(li => new QuotationLineItemDto
+            {
+                MaterialServiceId = li.MaterialServiceId,
+                Quantity = (int)li.Quantity,
+                UnitOfMeasure = li.QuantityUnit,
+                UnitPrice = li.UnitPrice,
+                ManufacturingProcess = li.ManufacturingProcess,
+                Notes = li.Notes
+            }).ToList(),
+            TotalPrice = version.TotalPrice,
+            CurrencyCode = version.CurrencyCode,
+            DiscountStructure = version.DiscountStructures.FirstOrDefault() != null ? new DiscountStructureDto
+            {
+                DiscountType = version.DiscountStructures.First().DiscountType,
+                DiscountValue = version.DiscountStructures.First().DiscountValue,
+                Conditions = version.DiscountStructures.First().Conditions,
+                AuthorizationReason = version.DiscountStructures.First().AuthorizationReason
+            } : null,
+            DeliveryExpectations = version.DeliveryExpectations != null
+                ? (version.DeliveryExpectations.RootElement.TryGetProperty("expectations", out var exp)
+                    ? exp.GetString()
+                    : version.DeliveryExpectations.RootElement.GetRawText())
+                : null,
+            ChangeSummary = version.ChangeSummary,
+            CreatedByUserId = version.CreatedByUserId,
+            CreatedAt = version.CreatedAt
+        };
+    }
+}
+
+public class UpdateQuotationStatusRequest
+{
+    public QuotationStatus Status { get; set; }
+}
