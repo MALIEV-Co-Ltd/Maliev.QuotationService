@@ -17,7 +17,7 @@ public class MaterialServiceClient : IMaterialServiceClient
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/api/v1/materials/{materialId}", cancellationToken);
+            var response = await _httpClient.GetAsync($"/materials/v1/Materials/{materialId}", cancellationToken);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -38,7 +38,7 @@ public class MaterialServiceClient : IMaterialServiceClient
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/api/v1/materials/{materialId}/processes", cancellationToken);
+            var response = await _httpClient.GetAsync($"/materials/v1/Materials/{materialId}/processes", cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<ProcessesResponse>(cancellationToken);

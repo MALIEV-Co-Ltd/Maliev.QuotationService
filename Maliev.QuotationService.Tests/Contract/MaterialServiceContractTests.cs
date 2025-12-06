@@ -20,13 +20,13 @@ public class MaterialServiceContractTests : BaseIntegrationTest
         // Set up the mock handler for the Material Service client
         factory.MockMaterialServiceHandler = (request, cancellationToken) =>
         {
-            var materialId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+            var materialId = Guid.Parse("00000000-0000-0000-0000-000000000001"); // This is the ID used in the tests
 
-            if (request.RequestUri!.AbsolutePath.Contains($"/api/v1/materials/{materialId}/processes"))
+            if (request.RequestUri!.AbsolutePath.Contains($"/materials/v1/Materials/{materialId}/processes"))
             {
                 var response = new
                 {
-                    Processes = new[] { "CNC Machining", "3D Printing", "Laser Cutting", "Sheet Metal Forming" }
+                    processes = new[] { "CNC Machining", "3D Printing", "Laser Cutting", "Sheet Metal Forming" }
                 };
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -34,13 +34,43 @@ public class MaterialServiceContractTests : BaseIntegrationTest
                 });
             }
 
-            if (request.RequestUri!.AbsolutePath.Contains($"/api/v1/materials/{materialId}"))
+            if (request.RequestUri!.AbsolutePath.Contains($"/materials/v1/Materials/{materialId}"))
             {
                 var response = new
                 {
                     id = materialId,
                     name = "Aluminum 6061",
-                    mechanicalProperties = JsonDocument.Parse("{\"tensileStrength\": 310, \"yieldStrength\": 276, \"hardness\": 95}")
+                    code = "AL6061",
+                    description = "Common aluminum alloy",
+                    pricePerUnit = 10.5m,
+                    stockLevel = 100,
+                    supplierId = Guid.Parse("123e4567-e89b-12d3-a456-426614174000"),
+                    supplierName = "AluSuppliers Inc.",
+                    manufacturingProcesses = new[]
+                    {
+                        new { id = Guid.NewGuid(), name = "CNC Machining" },
+                        new { id = Guid.NewGuid(), name = "Laser Cutting" }
+                    },
+                    availableColors = new[]
+                    {
+                        new { id = Guid.NewGuid(), name = "Silver", hexCode = "#C0C0C0" }
+                    },
+                    postProcessingMethods = new[]
+                    {
+                        new { id = Guid.NewGuid(), name = "Anodizing" }
+                    },
+                    mechanicalProperties = new[]
+                    {
+                        new { mechanicalPropertyId = Guid.NewGuid(), mechanicalPropertyName = "tensileStrength", unit = "MPa", value = 310 },
+                        new { mechanicalPropertyId = Guid.NewGuid(), mechanicalPropertyName = "yieldStrength", unit = "MPa", value = 276 },
+                        new { mechanicalPropertyId = Guid.NewGuid(), mechanicalPropertyName = "hardness", unit = "HB", value = 95 }
+                    },
+                    createdBy = "system",
+                    createdAt = DateTime.UtcNow.AddDays(-30),
+                    updatedBy = (string?)null,
+                    updatedAt = (DateTime?)null,
+                    version = 1,
+                    active = true
                 };
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -70,10 +100,13 @@ public class MaterialServiceContractTests : BaseIntegrationTest
         Assert.NotNull(material.MechanicalProperties);
 
         // Expected properties from Material Service (stored as JsonDocument)
-        var mechProps = material.MechanicalProperties!.RootElement;
-        Assert.True(mechProps.TryGetProperty("tensileStrength", out _));
-        Assert.True(mechProps.TryGetProperty("yieldStrength", out _));
-        Assert.True(mechProps.TryGetProperty("hardness", out _));
+        Assert.NotNull(material.MechanicalProperties);
+        Assert.Equal(JsonValueKind.Array, material.MechanicalProperties.RootElement.ValueKind);
+
+        var mechanicalProperties = material.MechanicalProperties.RootElement.EnumerateArray().ToList();
+        Assert.Contains(mechanicalProperties, p => p.GetProperty("mechanicalPropertyName").GetString() == "tensileStrength");
+        Assert.Contains(mechanicalProperties, p => p.GetProperty("mechanicalPropertyName").GetString() == "yieldStrength");
+        Assert.Contains(mechanicalProperties, p => p.GetProperty("mechanicalPropertyName").GetString() == "hardness");
     }
 
     [Fact]
