@@ -3,7 +3,6 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution file and project files
-COPY ["Maliev.QuotationService.sln", "./"]
 COPY ["Maliev.QuotationService.Api/Maliev.QuotationService.Api.csproj", "Maliev.QuotationService.Api/"]
 COPY ["Maliev.QuotationService.Data/Maliev.QuotationService.Data.csproj", "Maliev.QuotationService.Data/"]
 COPY ["nuget.config", "./"]
