@@ -18,6 +18,12 @@ jobs:
         with:
           dotnet-version: "10.x"
 
+      - name: Switch to PackageReference for CI build
+        run: |
+          # Replace ProjectReference with PackageReference in all service csproj files
+          find . -name "*.csproj" -type f -exec sed -i 's|<ProjectReference Include=".*Maliev.Aspire.ServiceDefaults.*.csproj" />|<PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="1.0.*" />|g' {} \;
+          echo "Switched to PackageReference for ServiceDefaults"
+
       - name: Restore dependencies
         run: dotnet restore Maliev.QuotationService.sln
         env:
@@ -39,7 +45,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: maliev-website
-
 
       - name: Build and push Docker image
         run: |
@@ -93,9 +98,4 @@ jobs:
           git push origin $BRANCH_NAME
 
           # Create pull request using GitHub CLI
-          gh pr create \
-            --title "Deploy quotation-service ${{ github.sha }} to development" \
-            --body "$PR_BODY" \
-            --base main \
-            --head $BRANCH_NAME \
-            --repo MALIEV-Co-Ltd/maliev-gitops
+          gh pr create             --title "Deploy quotation-service ${{ github.sha }} to development"             --body "$PR_BODY"             --base main             --head $BRANCH_NAME             --repo MALIEV-Co-Ltd/maliev-gitops
