@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 using Maliev.QuotationService.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,10 +17,44 @@ public class MaterialServiceContractTests : BaseIntegrationTest
 
     public MaterialServiceContractTests(IntegrationTestWebAppFactory factory) : base(factory)
     {
+        // Set up the mock handler for the Material Service client
+        factory.MockMaterialServiceHandler = (request, cancellationToken) =>
+        {
+            var materialId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+            if (request.RequestUri!.AbsolutePath.Contains($"/api/v1/materials/{materialId}/processes"))
+            {
+                var response = new
+                {
+                    Processes = new[] { "CNC Machining", "3D Printing", "Laser Cutting", "Sheet Metal Forming" }
+                };
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(response)
+                });
+            }
+
+            if (request.RequestUri!.AbsolutePath.Contains($"/api/v1/materials/{materialId}"))
+            {
+                var response = new
+                {
+                    id = materialId,
+                    name = "Aluminum 6061",
+                    mechanicalProperties = JsonDocument.Parse("{\"tensileStrength\": 310, \"yieldStrength\": 276, \"hardness\": 95}")
+                };
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(response)
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        };
+        
         _materialServiceClient = Scope.ServiceProvider.GetRequiredService<IMaterialServiceClient>();
     }
 
-    [Fact(Skip = "Contract test - requires Material Service to be running")]
+    [Fact]
     public async Task GetMaterialById_ValidId_ReturnsData()
     {
         // Arrange
@@ -39,7 +76,7 @@ public class MaterialServiceContractTests : BaseIntegrationTest
         Assert.True(mechProps.TryGetProperty("hardness", out _));
     }
 
-    [Fact(Skip = "Contract test - requires Material Service to be running")]
+    [Fact]
     public async Task GetSupportedProcesses_ValidMaterialId_ReturnsProcessList()
     {
         // Arrange

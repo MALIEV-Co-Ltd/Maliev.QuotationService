@@ -1,6 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 using Maliev.QuotationService.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -19,6 +22,9 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     private readonly RSA _testRsa;
     private const string TestIssuer = "test-issuer";
     private const string TestAudience = "test-audience";
+
+    // Public mock handler for Material Service client
+    public Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? MockMaterialServiceHandler { get; set; }
 
     public IntegrationTestWebAppFactory()
     {
@@ -78,6 +84,13 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
                     ClockSkew = TimeSpan.Zero // No clock skew for tests
                 };
             });
+            
+            // Mock Material Service HTTP client
+            services.AddHttpClient<IMaterialServiceClient, Maliev.QuotationService.Api.ExternalClients.MaterialServiceClient>(client =>
+                {
+                    client.BaseAddress = new Uri("http://materialservice.test");
+                })
+                .AddHttpMessageHandler(() => new MockHttpHandler(MockMaterialServiceHandler));
 
             // Build service provider and apply migrations
             var serviceProvider = services.BuildServiceProvider();
@@ -131,5 +144,30 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}
+
+// Private mock handler to intercept HTTP calls
+file class MockHttpHandler : DelegatingHandler
+{
+    private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? _handler;
+
+    public MockHttpHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? handler)
+    {
+        _handler = handler;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        if (_handler != null)
+        {
+            return _handler(request, cancellationToken);
+        }
+
+        // Default to a 404 Not Found if no handler is provided
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            RequestMessage = request
+        });
     }
 }
