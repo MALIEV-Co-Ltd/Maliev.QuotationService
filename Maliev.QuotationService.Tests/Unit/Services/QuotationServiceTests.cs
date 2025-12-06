@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using Maliev.QuotationService.Api.Services;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Data;
@@ -59,18 +59,18 @@ public class QuotationServiceTests
         );
 
         // Assert
-        quotation.Should().NotBeNull();
-        quotation.CustomerId.Should().Be(customer.Id);
-        quotation.Status.Should().Be(QuotationStatus.Draft);
-        quotation.CurrentVersionId.Should().NotBeEmpty();
+        Assert.NotNull(quotation);
+        Assert.Equal(customer.Id, quotation.CustomerId);
+        Assert.Equal(QuotationStatus.Draft, quotation.Status);
+        Assert.NotEqual(Guid.Empty, quotation.CurrentVersionId);
 
         var savedQuotation = await context.Quotations
             .Include(q => q.Versions)
             .FirstOrDefaultAsync(q => q.Id == quotation.Id);
 
-        savedQuotation.Should().NotBeNull();
-        savedQuotation!.Versions.Should().HaveCount(1);
-        savedQuotation.Versions.First().VersionNumber.Should().Be(1);
+        Assert.NotNull(savedQuotation);
+        Assert.Single(savedQuotation.Versions);
+        Assert.Equal(1, savedQuotation.Versions.First().VersionNumber);
     }
 
     [Fact]
@@ -120,13 +120,13 @@ public class QuotationServiceTests
         );
 
         // Assert
-        quotation.Should().NotBeNull();
-        quotation.SourceRfqId.Should().Be(rfq.Id);
-        quotation.CustomerId.Should().Be(customer.Id);
+        Assert.NotNull(quotation);
+        Assert.Equal(rfq.Id, quotation.SourceRfqId);
+        Assert.Equal(customer.Id, quotation.CustomerId);
 
         // Verify RFQ status was updated
         var updatedRfq = await context.Rfqs.FindAsync(rfq.Id);
-        updatedRfq!.ConvertedToQuotationId.Should().Be(quotation.Id);
+        Assert.Equal(quotation.Id, updatedRfq!.ConvertedToQuotationId);
     }
 
     [Fact]
@@ -188,14 +188,14 @@ public class QuotationServiceTests
         );
 
         // Assert
-        updatedQuotation.Should().NotBeNull();
-        updatedQuotation.CurrentVersionId.Should().NotBe(version1.Id);
+        Assert.NotNull(updatedQuotation);
+        Assert.NotEqual(version1.Id, updatedQuotation.CurrentVersionId);
 
         var savedQuotation = await context.Quotations
             .Include(q => q.Versions)
             .FirstOrDefaultAsync(q => q.Id == quotation.Id);
 
-        savedQuotation!.Versions.Should().HaveCount(2);
-        savedQuotation.Versions.Should().Contain(v => v.VersionNumber == 2);
+        Assert.Equal(2, savedQuotation!.Versions.Count);
+        Assert.Contains(savedQuotation.Versions, v => v.VersionNumber == 2);
     }
 }

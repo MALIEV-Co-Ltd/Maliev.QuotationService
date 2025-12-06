@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
+using Xunit;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Data.Entities;
@@ -57,14 +57,14 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         var response = await authenticatedClient.PostAsJsonAsync("/quotation/v1/quotations", request);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var quotationResponse = await response.Content.ReadFromJsonAsync<QuotationResponse>();
-        quotationResponse.Should().NotBeNull();
-        quotationResponse!.Id.Should().NotBeEmpty();
-        quotationResponse.CustomerId.Should().Be(customer.Id);
-        quotationResponse.Status.Should().Be(QuotationStatus.Draft);
-        quotationResponse.CurrentVersionNumber.Should().Be(1);
+        Assert.NotNull(quotationResponse);
+        Assert.NotEqual(Guid.Empty, quotationResponse.Id);
+        Assert.Equal(customer.Id, quotationResponse.CustomerId);
+        Assert.Equal(QuotationStatus.Draft, quotationResponse.Status);
+        Assert.Equal(1, quotationResponse.CurrentVersionNumber);
 
         // Verify database persistence
         var savedQuotation = await DbContext.Quotations
@@ -72,9 +72,9 @@ public class QuotationEndpointsTests : BaseIntegrationTest
             .ThenInclude(v => v.LineItems)
             .FirstOrDefaultAsync(q => q.Id == quotationResponse.Id);
 
-        savedQuotation.Should().NotBeNull();
-        savedQuotation!.Versions.Should().HaveCount(1);
-        savedQuotation.Versions.First().LineItems.Should().HaveCount(1);
+        Assert.NotNull(savedQuotation);
+        Assert.Single(savedQuotation.Versions);
+        Assert.Single(savedQuotation.Versions.First().LineItems);
     }
 
     [Fact]
@@ -157,15 +157,19 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         var response = await authenticatedClient.GetAsync($"/quotation/v1/quotations/{quotation.Id}/versions");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var versions = await response.Content.ReadFromJsonAsync<List<QuotationVersionResponse>>();
-        versions.Should().NotBeNull();
-        versions!.Should().HaveCount(3);
-        versions.Should().BeInDescendingOrder(v => v.VersionNumber);
+        Assert.NotNull(versions);
+        Assert.Equal(3, versions.Count);
+        Assert.Collection(versions, 
+            item => Assert.Equal(3, item.VersionNumber),
+            item => Assert.Equal(2, item.VersionNumber),
+            item => Assert.Equal(1, item.VersionNumber)
+        );
 
-        var firstVersion = versions[0];
-        firstVersion.VersionNumber.Should().Be(3);
-        firstVersion.ChangeSummary.Should().Be("Final revision");
+        var firstVersion = versions.First();
+        Assert.Equal(3, firstVersion.VersionNumber);
+        Assert.Equal("Final revision", firstVersion.ChangeSummary);
     }
 }

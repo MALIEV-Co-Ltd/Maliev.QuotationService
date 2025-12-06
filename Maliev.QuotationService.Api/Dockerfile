@@ -6,15 +6,14 @@ WORKDIR /src
 COPY ["Maliev.QuotationService.sln", "./"]
 COPY ["Maliev.QuotationService.Api/Maliev.QuotationService.Api.csproj", "Maliev.QuotationService.Api/"]
 COPY ["Maliev.QuotationService.Data/Maliev.QuotationService.Data.csproj", "Maliev.QuotationService.Data/"]
-COPY ["Maliev.QuotationService.Tests/Maliev.QuotationService.Tests.csproj", "Maliev.QuotationService.Tests/"]
 COPY ["nuget.config", "./"]
 
 # Restore packages with BuildKit secrets for NuGet authentication
 RUN --mount=type=secret,id=nuget_username \
-    --mount=type=secret,id=nuget_password \
-    export NUGET_USERNAME=$(cat /run/secrets/nuget_username) && \
-    export NUGET_PASSWORD=$(cat /run/secrets/nuget_password) && \
-    dotnet restore "Maliev.QuotationService.Api/Maliev.QuotationService.Api.csproj"
+  --mount=type=secret,id=nuget_password \
+  export NUGET_USERNAME=$(cat /run/secrets/nuget_username) && \
+  export NUGET_PASSWORD=$(cat /run/secrets/nuget_password) && \
+  dotnet restore "Maliev.QuotationService.Api/Maliev.QuotationService.Api.csproj"
 
 # Copy all source code
 COPY . .

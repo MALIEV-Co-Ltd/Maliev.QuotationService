@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
+using Xunit;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Data.Entities;
@@ -34,23 +34,23 @@ public class RfqEndpointsTests : BaseIntegrationTest
         var response = await authenticatedClient.PostAsJsonAsync("/quotation/v1/rfqs", request);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var rfqResponse = await response.Content.ReadFromJsonAsync<RfqResponse>();
-        rfqResponse.Should().NotBeNull();
-        rfqResponse!.Id.Should().NotBeEmpty();
-        rfqResponse.Customer.Should().NotBeNull();
-        rfqResponse.Customer.Email.Should().Be("newcustomer@example.com");
-        rfqResponse.ChannelSource.Should().Be(RfqChannel.Website);
-        rfqResponse.Status.Should().Be(RfqStatus.New);
+        Assert.NotNull(rfqResponse);
+        Assert.NotEqual(Guid.Empty, rfqResponse.Id);
+        Assert.NotNull(rfqResponse.Customer);
+        Assert.Equal("newcustomer@example.com", rfqResponse.Customer.Email);
+        Assert.Equal(RfqChannel.Website, rfqResponse.ChannelSource);
+        Assert.Equal(RfqStatus.New, rfqResponse.Status);
 
         // Verify database persistence
         var savedRfq = await DbContext.Rfqs
             .Include(r => r.Customer)
             .FirstOrDefaultAsync(r => r.Id == rfqResponse.Id);
 
-        savedRfq.Should().NotBeNull();
-        savedRfq!.Customer.Email.Should().Be("newcustomer@example.com");
+        Assert.NotNull(savedRfq);
+        Assert.Equal("newcustomer@example.com", savedRfq.Customer.Email);
     }
 
     [Fact]
@@ -114,24 +114,24 @@ public class RfqEndpointsTests : BaseIntegrationTest
 
         // Act - Filter by channel
         var response1 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?channel=Website");
-        response1.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
         var result1 = await response1.Content.ReadFromJsonAsync<List<RfqResponse>>();
-        result1.Should().HaveCount(1);
-        result1![0].ChannelSource.Should().Be(RfqChannel.Website);
+        Assert.Single(result1);
+        Assert.Equal(RfqChannel.Website, result1[0].ChannelSource);
 
         // Act - Filter by status
         var response2 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?status=InProgress");
-        response2.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
         var result2 = await response2.Content.ReadFromJsonAsync<List<RfqResponse>>();
-        result2.Should().HaveCount(1);
-        result2![0].Status.Should().Be(RfqStatus.InProgress);
+        Assert.Single(result2);
+        Assert.Equal(RfqStatus.InProgress, result2[0].Status);
 
         // Act - Filter by assigned staff
         var response3 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?assignedStaffUserId=staff-123");
-        response3.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response3.StatusCode);
         var result3 = await response3.Content.ReadFromJsonAsync<List<RfqResponse>>();
-        result3.Should().HaveCount(1);
-        result3![0].AssignedStaffUserId.Should().Be("staff-123");
+        Assert.Single(result3);
+        Assert.Equal("staff-123", result3[0].AssignedStaffUserId);
     }
 
     [Fact]
@@ -172,18 +172,18 @@ public class RfqEndpointsTests : BaseIntegrationTest
         var response = await authenticatedClient.PostAsJsonAsync($"/quotation/v1/rfqs/{rfq.Id}/notes", noteRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var noteResponse = await response.Content.ReadFromJsonAsync<InternalNoteResponse>();
-        noteResponse.Should().NotBeNull();
-        noteResponse!.Content.Should().Be("Customer requested urgent delivery");
-        noteResponse.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        Assert.NotNull(noteResponse);
+        Assert.Equal("Customer requested urgent delivery", noteResponse.Content);
+        Assert.True(DateTime.UtcNow.Subtract(noteResponse.CreatedAt).TotalSeconds < 5);
 
         // Verify database persistence
         var savedNote = await DbContext.InternalNotes
             .FirstOrDefaultAsync(n => n.RfqId == rfq.Id);
 
-        savedNote.Should().NotBeNull();
-        savedNote!.Content.Should().Be("Customer requested urgent delivery");
+        Assert.NotNull(savedNote);
+        Assert.Equal("Customer requested urgent delivery", savedNote.Content);
     }
 }

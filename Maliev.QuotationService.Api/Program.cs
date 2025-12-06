@@ -1,44 +1,31 @@
-using FluentValidation;
+
 using Maliev.QuotationService.Api.Configuration.Extensions;
 using Maliev.QuotationService.Api.Middleware;
 using Maliev.QuotationService.Data;
 using Prometheus;
 using Scalar.AspNetCore;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure standard .NET logging for Aspire
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddJsonConsole(options =>
-{
-    options.IncludeScopes = true;
-    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-});
+builder.AddServiceDefaults();
 
 // Add services to the container
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 
 // Add API versioning
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-});
+builder.AddDefaultApiVersioning();
 
-// Add FluentValidation
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
 
 // Add database context
-builder.Services.AddQuotationDbContext(builder.Configuration);
+builder.AddPostgresDbContext<QuotationDbContext>("QuotationDbContext");
 
 // Add caching (Redis or in-memory fallback)
-builder.Services.AddRedisCache(builder.Configuration);
+builder.AddRedisDistributedCache("Quotation");
 
 // Add message bus (RabbitMQ or in-memory fallback)
-builder.Services.AddMassTransitWithRabbitMq(builder.Configuration);
+builder.AddMassTransitWithRabbitMq();
 
 // Add external service clients with resilience
 builder.Services.AddExternalServiceClients(builder.Configuration);
@@ -47,28 +34,40 @@ builder.Services.AddExternalServiceClients(builder.Configuration);
 builder.Services.AddApplicationServices();
 
 // Add authentication
-builder.Services.AddJwtAuthentication(builder.Configuration);
-builder.Services.AddAuthorizationPolicies();
-
-// Add rate limiting
-builder.Services.AddRateLimiting();
-
-// Add CORS
-builder.Services.AddCors(options =>
+builder.AddJwtAuthentication();
+builder.Services.AddAuthorization(options =>
 {
-    options.AddDefaultPolicy(policy =>
-    {
-        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-        policy.WithOrigins(allowedOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
-    });
+    options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
+    options.AddPolicy("Employee", policy => policy.RequireRole("Employee"));
+    options.AddPolicy("Manager", policy => policy.RequireRole("Manager"));
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("EmployeeOrHigher", policy =>
+        policy.RequireRole("Employee", "Manager", "Admin"));
 });
 
-// Add health checks
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<QuotationDbContext>("database");
+
+// Add rate limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User.Identity?.Name ?? context.Request.Headers.Host.ToString(),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", cancellationToken: token);
+    };
+});
+
+// Add CORS
+builder.AddDefaultCors();
+
 
 var app = builder.Build();
 
@@ -82,8 +81,7 @@ app.UseHttpMetrics();
 // Configure HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapApiDocumentation("quotation");
 }
 
 app.UseHttpsRedirection();
@@ -100,36 +98,8 @@ app.UseRateLimiter();
 
 app.MapControllers();
 
-// Map Prometheus metrics endpoint
-app.MapMetrics("/quotation/metrics");
+app.MapDefaultEndpoints("quotation");
 
-// Map health check endpoints
-app.MapHealthChecks("/quotation/liveness", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
-{
-    Predicate = _ => false // Liveness - always returns healthy (basic ping)
-});
-
-app.MapHealthChecks("/quotation/readiness", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready") || check.Name == "database",
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-        var result = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            status = report.Status.ToString(),
-            checks = report.Entries.Select(e => new
-            {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description,
-                duration = e.Value.Duration.TotalMilliseconds
-            }),
-            totalDuration = report.TotalDuration.TotalMilliseconds
-        });
-        await context.Response.WriteAsync(result);
-    }
-});
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
