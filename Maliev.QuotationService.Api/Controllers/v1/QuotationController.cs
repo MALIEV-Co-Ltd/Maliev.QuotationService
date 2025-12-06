@@ -2,7 +2,8 @@ using Asp.Versioning;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Api.Services.Interfaces;
-using Maliev.QuotationService.Api.Services.Metrics;
+// TODO: Migrate to OpenTelemetry
+// using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
@@ -297,7 +298,8 @@ public class QuotationController : ControllerBase
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.InternalNotesCreatedTotal.Inc();
+        // TODO: Migrate to OpenTelemetry
+        // BusinessMetrics.InternalNotesCreatedTotal.Inc();
 
         var response = new InternalNoteResponse
         {

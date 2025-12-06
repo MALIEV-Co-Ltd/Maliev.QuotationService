@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Maliev.QuotationService.Api.Services.Interfaces;
-using Maliev.QuotationService.Api.Services.Metrics;
+// TODO: Migrate to OpenTelemetry
+// using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
@@ -75,7 +76,8 @@ public class RfqService : IRfqService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.RfqCreatedTotal.WithLabels(channelSource.ToString()).Inc();
+        // TODO: Migrate to OpenTelemetry
+        // BusinessMetrics.RfqCreatedTotal.WithLabels(channelSource.ToString()).Inc();
 
         _logger.LogInformation("Created RFQ {RfqId} for customer {CustomerId}", rfq.Id, customerId);
 
@@ -245,9 +247,10 @@ public class RfqService : IRfqService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.RfqStatusTransitionsTotal
-            .WithLabels(oldStatus.ToString(), status.ToString())
-            .Inc();
+        // TODO: Migrate to OpenTelemetry
+        // BusinessMetrics.RfqStatusTransitionsTotal
+        //     .WithLabels(oldStatus.ToString(), status.ToString())
+        //     .Inc();
 
         _logger.LogInformation("Updated RFQ {RfqId} status from {OldStatus} to {NewStatus}", rfqId, oldStatus, status);
 
@@ -298,7 +301,8 @@ public class RfqService : IRfqService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.InternalNotesCreatedTotal.Inc();
+        // TODO: Migrate to OpenTelemetry
+        // BusinessMetrics.InternalNotesCreatedTotal.Inc();
 
         _logger.LogInformation("Added note to RFQ {RfqId}", rfqId);
 

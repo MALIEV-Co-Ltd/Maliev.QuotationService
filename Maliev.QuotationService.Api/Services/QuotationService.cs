@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Maliev.QuotationService.Api.Services.Interfaces;
-using Maliev.QuotationService.Api.Services.Metrics;
+// TODO: Migrate to OpenTelemetry
+// using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
@@ -125,7 +126,8 @@ public class QuotationService : IQuotationService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.QuotationCreatedTotal.Inc();
+        // TODO: Migrate to OpenTelemetry
+        // BusinessMetrics.QuotationCreatedTotal.Inc();
 
         _logger.LogInformation("Created quotation {QuotationId} for customer {CustomerId}", quotation.Id, customerId);
 
@@ -294,9 +296,10 @@ public class QuotationService : IQuotationService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.QuotationStatusTransitionsTotal
-            .WithLabels(oldStatus.ToString(), status.ToString())
-            .Inc();
+        // TODO: Migrate to OpenTelemetry
+        // BusinessMetrics.QuotationStatusTransitionsTotal
+        //     .WithLabels(oldStatus.ToString(), status.ToString())
+        //     .Inc();
 
         _logger.LogInformation("Updated quotation {QuotationId} status from {OldStatus} to {NewStatus}",
             quotationId, oldStatus, status);
@@ -347,10 +350,11 @@ public class QuotationService : IQuotationService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metrics
-        BusinessMetrics.QuotationApprovalsTotal.Inc();
-        BusinessMetrics.QuotationStatusTransitionsTotal
-            .WithLabels(oldStatus.ToString(), QuotationStatus.Approved.ToString())
-            .Inc();
+        // TODO: Migrate to OpenTelemetry
+        // BusinessMetrics.QuotationApprovalsTotal.Inc();
+        // BusinessMetrics.QuotationStatusTransitionsTotal
+        //     .WithLabels(oldStatus.ToString(), QuotationStatus.Approved.ToString())
+        //     .Inc();
 
         _logger.LogInformation(
             "Quotation {QuotationId} approved by {UserId}. Status changed from {OldStatus} to {NewStatus}",
