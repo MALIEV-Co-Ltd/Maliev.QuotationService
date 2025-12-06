@@ -1,90 +1,85 @@
-using FluentValidation;
 using Maliev.QuotationService.Api.Configuration.Extensions;
 using Maliev.QuotationService.Api.Middleware;
 using Maliev.QuotationService.Data;
-using Prometheus;
-using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure standard .NET logging for Aspire
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddJsonConsole(options =>
-{
-    options.IncludeScopes = true;
-    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-});
+// --- Secrets & Configuration ---
+builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if available
 
-// Add services to the container
+// --- Infrastructure & Observability ---
+builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
+builder.AddServiceMeters("quotation"); // Register service meters for OpenTelemetry business metrics
+
+builder.AddPostgresDbContext<QuotationDbContext>(connectionStringName: "QuotationDbContext"); // PostgreSQL with retry logic
+builder.AddRedisDistributedCache(instanceName: "Quotation:"); // Redis with in-memory fallback
+builder.AddMassTransitWithRabbitMq(); // RabbitMQ message bus (non-blocking startup)
+
+// --- API Configuration ---
+builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
+builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
+
+// JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
+builder.AddJwtAuthentication();
+
+// Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
+if (!builder.Environment.IsProduction())
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddOpenApi("v1", options =>
+    {
+        options.AddDocumentTransformer((document, context, cancellationToken) =>
+        {
+            document.Info.Title = "Maliev Quotation Service API";
+            document.Info.Version = "v1";
+            document.Info.Description = "Quotation and RFQ management service. Handles quotation creation and versioning, status workflows (draft/pending/approved/rejected), manager approval process, internal notes, version history tracking, and PDF generation for customer delivery.";
+            return Task.CompletedTask;
+        });
+    });
+}
+
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 
-// Add API versioning
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-});
-
-// Add FluentValidation
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-
-// Add database context
-builder.Services.AddQuotationDbContext(builder.Configuration);
-
-// Add caching (Redis or in-memory fallback)
-builder.Services.AddRedisCache(builder.Configuration);
-
-// Add message bus (RabbitMQ or in-memory fallback)
-builder.Services.AddMassTransitWithRabbitMq(builder.Configuration);
-
-// Add external service clients with resilience
+// External service clients with resilience
 builder.Services.AddExternalServiceClients(builder.Configuration);
 
-// Add application services
+// Application services
 builder.Services.AddApplicationServices();
 
-// Add authentication
-builder.Services.AddJwtAuthentication(builder.Configuration);
-builder.Services.AddAuthorizationPolicies();
-
-// Add rate limiting
-builder.Services.AddRateLimiting();
-
-// Add CORS
-builder.Services.AddCors(options =>
+// Authorization policies
+builder.Services.AddAuthorization(options =>
 {
-    options.AddDefaultPolicy(policy =>
-    {
-        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-        policy.WithOrigins(allowedOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
-    });
+    options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
+    options.AddPolicy("Employee", policy => policy.RequireRole("Employee"));
+    options.AddPolicy("Manager", policy => policy.RequireRole("Manager"));
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("EmployeeOrHigher", policy =>
+        policy.RequireRole("Employee", "Manager", "Admin"));
 });
 
-// Add health checks
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<QuotationDbContext>("database");
+// Rate limiting
+builder.Services.AddRateLimiting();
 
 var app = builder.Build();
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+// Run database migrations on startup (skip in Testing environment)
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    try
+    {
+        await app.MigrateDatabaseAsync<QuotationDbContext>();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Database migration failed - application may not function correctly");
+        // Don't throw - allow app to start for debugging
+    }
+}
 
 // Configure middleware pipeline
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
-// Enable Prometheus metrics
-app.UseHttpMetrics();
-
-// Configure HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
 
 app.UseHttpsRedirection();
 
@@ -100,43 +95,16 @@ app.UseRateLimiter();
 
 app.MapControllers();
 
-// Map Prometheus metrics endpoint
-app.MapMetrics("/quotation/metrics");
+// Map Aspire default endpoints (/health, /alive, /metrics)
+app.MapDefaultEndpoints(servicePrefix: "quotation");
 
-// Map health check endpoints
-app.MapHealthChecks("/quotation/liveness", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
-{
-    Predicate = _ => false // Liveness - always returns healthy (basic ping)
-});
-
-app.MapHealthChecks("/quotation/readiness", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready") || check.Name == "database",
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-        var result = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            status = report.Status.ToString(),
-            checks = report.Entries.Select(e => new
-            {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description,
-                duration = e.Value.Duration.TotalMilliseconds
-            }),
-            totalDuration = report.TotalDuration.TotalMilliseconds
-        });
-        await context.Response.WriteAsync(result);
-    }
-});
-
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
+// Map OpenAPI and Scalar documentation (dev/staging only)
+app.MapApiDocumentation(servicePrefix: "quotation");
 
 try
 {
     logger.LogInformation("Starting Quotation Service");
-    app.Run();
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
@@ -144,5 +112,7 @@ catch (Exception ex)
     throw;
 }
 
-// Make Program class accessible to tests
+/// <summary>
+/// Main program class for the Quotation Service API.
+/// </summary>
 public partial class Program { }
