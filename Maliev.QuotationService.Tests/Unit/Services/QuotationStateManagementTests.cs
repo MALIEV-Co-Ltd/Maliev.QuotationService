@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Maliev.QuotationService.Api.Services;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
@@ -61,13 +60,13 @@ public class QuotationStateManagementTests
             "test-user");
 
         // Assert
-        result.Should().NotBeNull();
-        result.Status.Should().Be(QuotationStatus.PendingApproval);
+        Assert.NotNull(result);
+        Assert.Equal(QuotationStatus.PendingApproval, result.Status);
 
         // Verify audit log was created
         var auditLog = await _context.AuditLogEntries
             .FirstOrDefaultAsync(a => a.EntityId == quotation.Id && a.ActionType == AuditActionType.Update);
-        auditLog.Should().NotBeNull();
+        Assert.NotNull(auditLog);
     }
 
     [Fact]
@@ -126,6 +125,6 @@ public class QuotationStateManagementTests
         var isValid = QuotationStateMachine.IsValidTransition(from, to);
 
         // Assert
-        isValid.Should().Be(expectedValid);
+        Assert.Equal(expectedValid, isValid);
     }
 }

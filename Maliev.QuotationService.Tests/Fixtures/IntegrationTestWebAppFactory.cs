@@ -1,7 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using Maliev.QuotationService.Api.Configuration.Settings;
 using Maliev.QuotationService.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -11,16 +10,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using Testcontainers.PostgreSql;
-using Testcontainers.RabbitMq;
-using Testcontainers.Redis;
 
 namespace Maliev.QuotationService.Tests.Fixtures;
 
 public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgresContainer;
-    private readonly RabbitMqContainer _rabbitMqContainer;
-    private readonly RedisContainer _redisContainer;
     private readonly RSA _testRsa;
     private const string TestIssuer = "test-issuer";
     private const string TestAudience = "test-audience";
@@ -36,43 +31,26 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             .WithUsername("postgres")
             .WithPassword("postgres")
             .Build();
-
-        _rabbitMqContainer = new RabbitMqBuilder()
-            .WithImage("rabbitmq:3-management")
-            .WithUsername("guest")
-            .WithPassword("guest")
-            .Build();
-
-        _redisContainer = new RedisBuilder()
-            .WithImage("redis:7.0")
-            .Build();
     }
 
     public async Task InitializeAsync()
     {
-        // Start all containers in parallel for faster test startup
-        await Task.WhenAll(
-            _postgresContainer.StartAsync(),
-            _rabbitMqContainer.StartAsync(),
-            _redisContainer.StartAsync()
-        );
+        // Start PostgreSQL container (RabbitMQ and Redis use in-memory fallbacks in Testing environment)
+        await _postgresContainer.StartAsync();
     }
 
     public new async Task DisposeAsync()
     {
-        // Stop all containers in parallel
-        await Task.WhenAll(
-            _postgresContainer.DisposeAsync().AsTask(),
-            _rabbitMqContainer.DisposeAsync().AsTask(),
-            _redisContainer.DisposeAsync().AsTask()
-        );
-
+        await _postgresContainer.DisposeAsync();
         _testRsa.Dispose();
         await base.DisposeAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // IMPORTANT: Set environment BEFORE ConfigureTestServices to ensure Program.cs sees Testing environment
+        builder.UseEnvironment("Testing");
+
         builder.ConfigureTestServices(services =>
         {
             // Remove existing DbContext registration
@@ -83,33 +61,6 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.AddDbContext<QuotationDbContext>(options =>
             {
                 options.UseNpgsql(_postgresContainer.GetConnectionString());
-            });
-
-            // Override RabbitMQ settings to use Testcontainers
-            services.Configure<RabbitMQSettings>(settings =>
-            {
-                settings.Enabled = true;
-                settings.Host = _rabbitMqContainer.Hostname;
-                settings.Port = (ushort)_rabbitMqContainer.GetMappedPublicPort(5672);
-                settings.VirtualHost = "/";
-                settings.Username = "guest";
-                settings.Password = "guest";
-            });
-
-            // Override Redis settings to use Testcontainers
-            services.Configure<RedisSettings>(settings =>
-            {
-                settings.Enabled = true;
-                settings.ConnectionString = _redisContainer.GetConnectionString();
-            });
-
-            // Configure JWT settings with ephemeral test key
-            // We'll reconfigure authentication entirely in test environment
-            services.Configure<JwtSettings>(settings =>
-            {
-                settings.PublicKey = string.Empty; // Empty = test mode
-                settings.Issuer = TestIssuer;
-                settings.Audience = TestAudience;
             });
 
             // PostConfigure JWT Bearer options to use our test RSA key

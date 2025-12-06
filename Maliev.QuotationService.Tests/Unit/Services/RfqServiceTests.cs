@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Maliev.QuotationService.Api.Services;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Data;
@@ -53,14 +52,14 @@ public class RfqServiceTests
         );
 
         // Assert
-        rfq.Should().NotBeNull();
-        rfq.CustomerId.Should().Be(customer.Id);
-        rfq.ChannelSource.Should().Be(RfqChannel.Website);
-        rfq.Status.Should().Be(RfqStatus.New);
-        rfq.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        Assert.NotNull(rfq);
+        Assert.Equal(customer.Id, rfq.CustomerId);
+        Assert.Equal(RfqChannel.Website, rfq.ChannelSource);
+        Assert.Equal(RfqStatus.New, rfq.Status);
+        Assert.InRange(rfq.CreatedAt, DateTime.UtcNow.AddSeconds(-5), DateTime.UtcNow.AddSeconds(5));
 
         var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
-        savedRfq.Should().NotBeNull();
+        Assert.NotNull(savedRfq);
     }
 
     [Fact]
@@ -109,12 +108,12 @@ public class RfqServiceTests
         );
 
         // Assert
-        updated.Should().NotBeNull();
-        updated.AssignedStaffUserId.Should().Be("staff-123");
-        updated.UpdatedAt.Should().BeAfter(originalUpdatedAt);
+        Assert.NotNull(updated);
+        Assert.Equal("staff-123", updated.AssignedStaffUserId);
+        Assert.True(updated.UpdatedAt > originalUpdatedAt);
 
         var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
-        savedRfq!.AssignedStaffUserId.Should().Be("staff-123");
+        Assert.Equal("staff-123", savedRfq!.AssignedStaffUserId);
     }
 
     [Fact]
@@ -156,11 +155,11 @@ public class RfqServiceTests
         );
 
         // Assert
-        assigned.Should().NotBeNull();
-        assigned.AssignedStaffUserId.Should().Be(staffUserId);
+        Assert.NotNull(assigned);
+        Assert.Equal(staffUserId, assigned.AssignedStaffUserId);
 
         var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
-        savedRfq!.AssignedStaffUserId.Should().Be(staffUserId);
+        Assert.Equal(staffUserId, savedRfq!.AssignedStaffUserId);
 
         // Verify audit log entry was created
         var auditEntry = await context.AuditLogEntries
@@ -168,8 +167,8 @@ public class RfqServiceTests
             .OrderByDescending(a => a.Timestamp)
             .FirstOrDefaultAsync();
 
-        auditEntry.Should().NotBeNull();
-        auditEntry!.ActionType.Should().Be(AuditActionType.Update);
-        auditEntry.UserId.Should().Be("manager-789");
+        Assert.NotNull(auditEntry);
+        Assert.Equal(AuditActionType.Update, auditEntry!.ActionType);
+        Assert.Equal("manager-789", auditEntry.UserId);
     }
 }

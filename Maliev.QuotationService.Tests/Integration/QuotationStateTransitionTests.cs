@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Data.Entities;
@@ -57,21 +56,21 @@ public class QuotationStateTransitionTests : BaseIntegrationTest
             JsonContent.Create(statusRequest));
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var quotationResponse = await response.Content.ReadFromJsonAsync<QuotationResponse>();
-        quotationResponse.Should().NotBeNull();
-        quotationResponse!.Status.Should().Be(QuotationStatus.PendingApproval);
+        Assert.NotNull(quotationResponse);
+        Assert.Equal(QuotationStatus.PendingApproval, quotationResponse!.Status);
 
         // Verify in database (detach and reload to get fresh data)
         DbContext.Entry(quotation).State = EntityState.Detached;
         var updatedQuotation = await DbContext.Quotations.FindAsync(quotation.Id);
-        updatedQuotation!.Status.Should().Be(QuotationStatus.PendingApproval);
+        Assert.Equal(QuotationStatus.PendingApproval, updatedQuotation!.Status);
 
         // Verify audit log
         var auditLog = await DbContext.AuditLogEntries
             .FirstOrDefaultAsync(a => a.EntityId == quotation.Id && a.ActionType == AuditActionType.Update);
-        auditLog.Should().NotBeNull();
+        Assert.NotNull(auditLog);
     }
 
     [Fact]
@@ -115,12 +114,12 @@ public class QuotationStateTransitionTests : BaseIntegrationTest
             JsonContent.Create(statusRequest));
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         // Verify status unchanged in database
         DbContext.Entry(quotation).State = EntityState.Detached;
         var unchangedQuotation = await DbContext.Quotations.FindAsync(quotation.Id);
-        unchangedQuotation!.Status.Should().Be(QuotationStatus.Draft);
+        Assert.Equal(QuotationStatus.Draft, unchangedQuotation!.Status);
     }
 
     [Fact]
@@ -160,21 +159,21 @@ public class QuotationStateTransitionTests : BaseIntegrationTest
             null);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var quotationResponse = await response.Content.ReadFromJsonAsync<QuotationResponse>();
-        quotationResponse.Should().NotBeNull();
-        quotationResponse!.Status.Should().Be(QuotationStatus.Approved);
+        Assert.NotNull(quotationResponse);
+        Assert.Equal(QuotationStatus.Approved, quotationResponse!.Status);
 
         // Verify in database (detach and reload to get fresh data)
         DbContext.Entry(quotation).State = EntityState.Detached;
         var approvedQuotation = await DbContext.Quotations.FindAsync(quotation.Id);
-        approvedQuotation!.Status.Should().Be(QuotationStatus.Approved);
+        Assert.Equal(QuotationStatus.Approved, approvedQuotation!.Status);
 
         // Verify audit log contains approval information
         var auditLog = await DbContext.AuditLogEntries
             .FirstOrDefaultAsync(a => a.EntityId == quotation.Id && a.UserId == "manager-user");
-        auditLog.Should().NotBeNull();
+        Assert.NotNull(auditLog);
     }
 
     [Fact]
@@ -214,12 +213,12 @@ public class QuotationStateTransitionTests : BaseIntegrationTest
             null);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
         // Verify status unchanged in database
         DbContext.Entry(quotation).State = EntityState.Detached;
         var unchangedQuotation = await DbContext.Quotations.FindAsync(quotation.Id);
-        unchangedQuotation!.Status.Should().Be(QuotationStatus.PendingApproval);
+        Assert.Equal(QuotationStatus.PendingApproval, unchangedQuotation!.Status);
     }
 
     [Fact]
@@ -258,12 +257,12 @@ public class QuotationStateTransitionTests : BaseIntegrationTest
             null);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         // Verify status unchanged
         DbContext.Entry(quotation).State = EntityState.Detached;
         var unchangedQuotation = await DbContext.Quotations.FindAsync(quotation.Id);
-        unchangedQuotation!.Status.Should().Be(QuotationStatus.Draft);
+        Assert.Equal(QuotationStatus.Draft, unchangedQuotation!.Status);
     }
 
     [Fact]
@@ -307,21 +306,21 @@ public class QuotationStateTransitionTests : BaseIntegrationTest
             noteRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var noteResponse = await response.Content.ReadFromJsonAsync<InternalNoteResponse>();
-        noteResponse.Should().NotBeNull();
-        noteResponse!.Content.Should().Be("This is a test note for the quotation");
+        Assert.NotNull(noteResponse);
+        Assert.Equal("This is a test note for the quotation", noteResponse!.Content);
 
         // Verify in database
         var note = await DbContext.InternalNotes
             .FirstOrDefaultAsync(n => n.QuotationId == quotation.Id);
-        note.Should().NotBeNull();
-        note!.Content.Should().Be("This is a test note for the quotation");
+        Assert.NotNull(note);
+        Assert.Equal("This is a test note for the quotation", note!.Content);
 
         // Verify audit log
         var auditLog = await DbContext.AuditLogEntries
             .FirstOrDefaultAsync(a => a.EntityId == quotation.Id);
-        auditLog.Should().NotBeNull();
+        Assert.NotNull(auditLog);
     }
 }

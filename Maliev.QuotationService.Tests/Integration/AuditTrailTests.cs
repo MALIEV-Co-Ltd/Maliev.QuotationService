@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using FluentAssertions;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Data.Enums;
@@ -33,7 +32,7 @@ public class AuditTrailTests : BaseIntegrationTest
         var rfqResponse = await response.Content.ReadFromJsonAsync<RfqResponse>();
 
         // Assert
-        rfqResponse.Should().NotBeNull();
+        Assert.NotNull(rfqResponse);
 
         // Verify audit log entry was created
         var auditEntries = await DbContext.AuditLogEntries
@@ -41,16 +40,16 @@ public class AuditTrailTests : BaseIntegrationTest
             .OrderBy(a => a.Timestamp)
             .ToListAsync();
 
-        auditEntries.Should().NotBeEmpty();
+        Assert.NotEmpty(auditEntries);
 
         var createEntry = auditEntries.FirstOrDefault(a => a.ActionType == AuditActionType.Create);
-        createEntry.Should().NotBeNull();
-        createEntry!.EntityId.Should().Be(rfqResponse!.Id);
-        createEntry.EntityType.Should().Be(AuditEntityType.RFQ);
-        createEntry.ActionType.Should().Be(AuditActionType.Create);
-        createEntry.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        Assert.NotNull(createEntry);
+        Assert.Equal(rfqResponse!.Id, createEntry!.EntityId);
+        Assert.Equal(AuditEntityType.RFQ, createEntry.EntityType);
+        Assert.Equal(AuditActionType.Create, createEntry.ActionType);
+        Assert.InRange(createEntry.Timestamp, DateTime.UtcNow.AddSeconds(-5), DateTime.UtcNow.AddSeconds(5));
 
         // ChangedFields should contain the initial data
-        createEntry.ChangedFields.Should().NotBeNull();
+        Assert.NotNull(createEntry.ChangedFields);
     }
 }
