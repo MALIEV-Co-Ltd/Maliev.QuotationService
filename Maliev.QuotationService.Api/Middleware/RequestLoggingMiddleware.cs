@@ -29,7 +29,7 @@ public class RequestLoggingMiddleware
             await _next(context);
             stopwatch.Stop();
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMilliseconds}ms (User: {UserId}, CorrelationId: {CorrelationId})",
                 requestMethod,
                 requestPath,
