@@ -1,6 +1,7 @@
 using Xunit;
 using Maliev.QuotationService.Api.Services;
 using Maliev.QuotationService.Api.Services.Interfaces;
+using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
@@ -10,10 +11,11 @@ using Moq;
 
 namespace Maliev.QuotationService.Tests.Unit.Services;
 
-public class QuotationServiceTests
+public class QuotationServiceTests : IDisposable
 {
     private readonly DbContextOptions<QuotationDbContext> _dbContextOptions;
-    private readonly Mock<ILogger<Api.Services.QuotationService>> _mockLogger;
+    private readonly Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>> _mockLogger;
+    private readonly MetricsService _metricsService;
 
     public QuotationServiceTests()
     {
@@ -21,7 +23,13 @@ public class QuotationServiceTests
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _mockLogger = new Mock<ILogger<Api.Services.QuotationService>>();
+        _mockLogger = new Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>>();
+        _metricsService = new MetricsService();
+    }
+
+    public void Dispose()
+    {
+        _metricsService.Dispose();
     }
 
     [Fact]
@@ -29,7 +37,7 @@ public class QuotationServiceTests
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Api.Services.QuotationService(context, _mockLogger.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService);
 
         var customer = new Customer
         {
@@ -78,7 +86,7 @@ public class QuotationServiceTests
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Api.Services.QuotationService(context, _mockLogger.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService);
 
         var customer = new Customer
         {
@@ -134,7 +142,7 @@ public class QuotationServiceTests
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Api.Services.QuotationService(context, _mockLogger.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService);
 
         var customer = new Customer
         {

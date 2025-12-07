@@ -4,16 +4,18 @@ using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Api.Services.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Maliev.QuotationService.Tests.Unit.Services;
 
-public class RfqServiceTests
+public class RfqServiceTests : IDisposable
 {
     private readonly DbContextOptions<QuotationDbContext> _dbContextOptions;
     private readonly Mock<ILogger<RfqService>> _mockLogger;
+    private readonly MetricsService _metricsService;
 
     public RfqServiceTests()
     {
@@ -22,6 +24,12 @@ public class RfqServiceTests
             .Options;
 
         _mockLogger = new Mock<ILogger<RfqService>>();
+        _metricsService = new MetricsService();
+    }
+
+    public void Dispose()
+    {
+        _metricsService.Dispose();
     }
 
     [Fact]
@@ -29,7 +37,7 @@ public class RfqServiceTests
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new RfqService(context, _mockLogger.Object);
+        var service = new RfqService(context, _mockLogger.Object, _metricsService);
 
         var customer = new Customer
         {
@@ -68,7 +76,7 @@ public class RfqServiceTests
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new RfqService(context, _mockLogger.Object);
+        var service = new RfqService(context, _mockLogger.Object, _metricsService);
 
         var customer = new Customer
         {
@@ -122,7 +130,7 @@ public class RfqServiceTests
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new RfqService(context, _mockLogger.Object);
+        var service = new RfqService(context, _mockLogger.Object, _metricsService);
 
         var customer = new Customer
         {

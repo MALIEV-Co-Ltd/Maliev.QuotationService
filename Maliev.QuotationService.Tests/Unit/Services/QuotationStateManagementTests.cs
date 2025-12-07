@@ -1,5 +1,6 @@
 using Xunit;
 using Maliev.QuotationService.Api.Services;
+using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
@@ -11,9 +12,10 @@ namespace Maliev.QuotationService.Tests.Unit.Services;
 
 public class QuotationStateManagementTests
 {
-    private readonly Mock<ILogger<Api.Services.QuotationService>> _mockLogger;
+    private readonly Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>> _mockLogger;
     private readonly QuotationDbContext _context;
-    private readonly Api.Services.QuotationService _quotationService;
+    private readonly Maliev.QuotationService.Api.Services.QuotationService _quotationService;
+    private readonly MetricsService _metricsService;
 
     public QuotationStateManagementTests()
     {
@@ -22,8 +24,9 @@ public class QuotationStateManagementTests
             .Options;
 
         _context = new QuotationDbContext(options);
-        _mockLogger = new Mock<ILogger<Api.Services.QuotationService>>();
-        _quotationService = new Api.Services.QuotationService(_context, _mockLogger.Object);
+        _mockLogger = new Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>>();
+        _metricsService = new MetricsService();
+        _quotationService = new Maliev.QuotationService.Api.Services.QuotationService(_context, _mockLogger.Object, _metricsService);
     }
 
     [Fact]

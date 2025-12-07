@@ -116,6 +116,7 @@ public class RfqEndpointsTests : BaseIntegrationTest
         var response1 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?channel=Website");
         Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
         var result1 = await response1.Content.ReadFromJsonAsync<List<RfqResponse>>();
+        Assert.NotNull(result1);
         Assert.Single(result1);
         Assert.Equal(RfqChannel.Website, result1[0].ChannelSource);
 
@@ -123,6 +124,7 @@ public class RfqEndpointsTests : BaseIntegrationTest
         var response2 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?status=InProgress");
         Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
         var result2 = await response2.Content.ReadFromJsonAsync<List<RfqResponse>>();
+        Assert.NotNull(result2);
         Assert.Single(result2);
         Assert.Equal(RfqStatus.InProgress, result2[0].Status);
 
@@ -130,6 +132,7 @@ public class RfqEndpointsTests : BaseIntegrationTest
         var response3 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?assignedStaffUserId=staff-123");
         Assert.Equal(HttpStatusCode.OK, response3.StatusCode);
         var result3 = await response3.Content.ReadFromJsonAsync<List<RfqResponse>>();
+        Assert.NotNull(result3);
         Assert.Single(result3);
         Assert.Equal("staff-123", result3[0].AssignedStaffUserId);
     }

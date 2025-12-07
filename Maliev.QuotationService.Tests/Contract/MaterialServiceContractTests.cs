@@ -18,7 +18,7 @@ public class MaterialServiceContractTests : BaseIntegrationTest
         _materialServiceClient = Scope.ServiceProvider.GetRequiredService<IMaterialServiceClient>();
     }
 
-    [Fact(Skip = "Contract test - requires Material Service to be running")]
+    [Fact]
     public async Task GetMaterialById_ValidId_ReturnsData()
     {
         // Arrange
@@ -40,7 +40,7 @@ public class MaterialServiceContractTests : BaseIntegrationTest
         Assert.True(mechProps.TryGetProperty("hardness", out _));
     }
 
-    [Fact(Skip = "Contract test - requires Material Service to be running")]
+    [Fact]
     public async Task GetSupportedProcesses_ValidMaterialId_ReturnsProcessList()
     {
         // Arrange

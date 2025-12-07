@@ -73,11 +73,16 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Testing");
         builder.ConfigureTestServices(services =>
         {
             // Remove existing DbContext registration
             services.RemoveAll<DbContextOptions<QuotationDbContext>>();
             services.RemoveAll<QuotationDbContext>();
+
+            // Mock MaterialService
+            services.RemoveAll<Maliev.QuotationService.Api.ExternalClients.Interfaces.IMaterialServiceClient>();
+            services.AddSingleton<Maliev.QuotationService.Api.ExternalClients.Interfaces.IMaterialServiceClient, Maliev.QuotationService.Tests.Mocks.MockMaterialServiceClient>();
 
             // Add DbContext with Testcontainers connection string
             services.AddDbContext<QuotationDbContext>(options =>
