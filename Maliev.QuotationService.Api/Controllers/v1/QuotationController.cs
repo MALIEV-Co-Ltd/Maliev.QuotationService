@@ -23,15 +23,18 @@ public class QuotationController : ControllerBase
     private readonly IQuotationService _quotationService;
     private readonly QuotationDbContext _context;
     private readonly ILogger<QuotationController> _logger;
+    private readonly MetricsService _metricsService;
 
     public QuotationController(
         IQuotationService quotationService,
         QuotationDbContext context,
-        ILogger<QuotationController> logger)
+        ILogger<QuotationController> logger,
+        MetricsService metricsService)
     {
         _quotationService = quotationService;
         _context = context;
         _logger = logger;
+        _metricsService = metricsService;
     }
 
     /// <summary>
@@ -297,7 +300,7 @@ public class QuotationController : ControllerBase
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.InternalNotesCreatedTotal.Inc();
+        _metricsService.RecordInternalNoteCreated();
 
         var response = new InternalNoteResponse
         {

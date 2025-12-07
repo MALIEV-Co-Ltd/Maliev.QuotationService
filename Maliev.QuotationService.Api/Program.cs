@@ -1,22 +1,18 @@
-
+using System.Threading.RateLimiting;
 using Maliev.QuotationService.Api.Configuration.Extensions;
 using Maliev.QuotationService.Api.Middleware;
+using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
-using Prometheus;
 using Scalar.AspNetCore;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
+// --- Secrets & Configuration ---
+builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if available
 
-// Add services to the container
-builder.Services.AddControllers();
-
-// Add API versioning
-builder.AddDefaultApiVersioning();
-
-
+// --- Infrastructure & Observability ---
+builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
+builder.AddServiceMeters("quotation"); // Register service meters for OpenTelemetry business metrics
 
 // Add database context
 builder.AddPostgresDbContext<QuotationDbContext>("QuotationDbContext");
@@ -27,11 +23,35 @@ builder.AddRedisDistributedCache("Quotation");
 // Add message bus (RabbitMQ or in-memory fallback)
 builder.AddMassTransitWithRabbitMq();
 
+// --- API Configuration ---
+builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
+builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
+
+// Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
+if (!builder.Environment.IsProduction())
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddOpenApi("v1", options =>
+    {
+        options.AddDocumentTransformer((document, context, cancellationToken) =>
+        {
+            document.Info.Title = "MALIEV Quotation Service API";
+            document.Info.Version = "v1";
+            document.Info.Description = "Quotation and RFQ management service.";
+            return Task.CompletedTask;
+        });
+    });
+}
+
 // Add external service clients with resilience
 builder.Services.AddExternalServiceClients(builder.Configuration);
 
 // Add application services
 builder.Services.AddApplicationServices();
+builder.Services.AddSingleton<MetricsService>();
+
+// Add controllers
+builder.Services.AddControllers();
 
 // Add authentication
 builder.AddJwtAuthentication();
@@ -44,7 +64,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("EmployeeOrHigher", policy =>
         policy.RequireRole("Employee", "Manager", "Admin"));
 });
-
 
 // Add rate limiting
 builder.Services.AddRateLimiter(options =>
@@ -65,54 +84,60 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// Add CORS
-builder.AddDefaultCors();
-
-
 var app = builder.Build();
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+// Run database migrations on startup (skip in Testing environment)
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    try
+    {
+        await app.MigrateDatabaseAsync<QuotationDbContext>();
+    }
+    catch (Exception ex)
+    {
+        Log.MigrationFailed(logger, ex);
+        // Don't throw - allow app to start for debugging
+    }
+}
 
 // Configure middleware pipeline
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// Enable Prometheus metrics
-app.UseHttpMetrics();
-
-// Configure HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.MapApiDocumentation("quotation");
-}
-
 app.UseHttpsRedirection();
-
-// Redirect root to /quotation
-app.MapGet("/", () => Results.Redirect("/quotation"));
-
+app.UseRouting();
 app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.UseRateLimiter();
+
+// Redirect root to /quotation (custom legacy behavior kept)
+app.MapGet("/", () => Results.Redirect("/quotation"));
 
 app.MapControllers();
 
 app.MapDefaultEndpoints("quotation");
 
+// Map OpenAPI and Scalar documentation (dev/staging only)
+app.MapApiDocumentation(servicePrefix: "quotation");
 
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
+Log.ServiceStarted(logger);
 
-try
+await app.RunAsync();
+
+/// <summary>
+/// Main program class for the application
+/// </summary>
+public partial class Program 
 {
-    logger.LogInformation("Starting Quotation Service");
-    app.Run();
-}
-catch (Exception ex)
-{
-    logger.LogCritical(ex, "Application terminated unexpectedly");
-    throw;
-}
+    internal static partial class Log
+    {
+        [LoggerMessage(Level = LogLevel.Information, Message = "QuotationService started successfully")]
+        public static partial void ServiceStarted(ILogger logger);
 
-// Make Program class accessible to tests
-public partial class Program { }
+        [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
+        public static partial void MigrationFailed(ILogger logger, Exception exception);
+    }
+}

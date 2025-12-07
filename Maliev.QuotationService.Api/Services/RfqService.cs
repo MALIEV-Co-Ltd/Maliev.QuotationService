@@ -12,11 +12,16 @@ public class RfqService : IRfqService
 {
     private readonly QuotationDbContext _context;
     private readonly ILogger<RfqService> _logger;
+    private readonly MetricsService _metricsService;
 
-    public RfqService(QuotationDbContext context, ILogger<RfqService> logger)
+    public RfqService(
+        QuotationDbContext context,
+        ILogger<RfqService> logger,
+        MetricsService metricsService)
     {
         _context = context;
         _logger = logger;
+        _metricsService = metricsService;
     }
 
     public async Task<Rfq> CreateAsync(
@@ -75,7 +80,7 @@ public class RfqService : IRfqService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.RfqCreatedTotal.WithLabels(channelSource.ToString()).Inc();
+        _metricsService.RecordRfqCreated(channelSource.ToString());
 
         _logger.LogInformation("Created RFQ {RfqId} for customer {CustomerId}", rfq.Id, customerId);
 
@@ -245,9 +250,7 @@ public class RfqService : IRfqService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.RfqStatusTransitionsTotal
-            .WithLabels(oldStatus.ToString(), status.ToString())
-            .Inc();
+        _metricsService.RecordRfqStatusTransition(oldStatus.ToString(), status.ToString());
 
         _logger.LogInformation("Updated RFQ {RfqId} status from {OldStatus} to {NewStatus}", rfqId, oldStatus, status);
 
@@ -298,9 +301,10 @@ public class RfqService : IRfqService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.InternalNotesCreatedTotal.Inc();
+        _metricsService.RecordInternalNoteCreated();
 
         _logger.LogInformation("Added note to RFQ {RfqId}", rfqId);
+
 
         return note;
     }

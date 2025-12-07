@@ -12,11 +12,16 @@ public class QuotationService : IQuotationService
 {
     private readonly QuotationDbContext _context;
     private readonly ILogger<QuotationService> _logger;
+    private readonly MetricsService _metricsService;
 
-    public QuotationService(QuotationDbContext context, ILogger<QuotationService> logger)
+    public QuotationService(
+        QuotationDbContext context,
+        ILogger<QuotationService> logger,
+        MetricsService metricsService)
     {
         _context = context;
         _logger = logger;
+        _metricsService = metricsService;
     }
 
     // NOTE: Automatic expiration of quotations (CustomerReview → Expired when ValidityPeriodEnd < NOW)
@@ -125,7 +130,7 @@ public class QuotationService : IQuotationService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.QuotationCreatedTotal.Inc();
+        _metricsService.RecordQuotationCreated();
 
         _logger.LogInformation("Created quotation {QuotationId} for customer {CustomerId}", quotation.Id, customerId);
 
@@ -294,9 +299,7 @@ public class QuotationService : IQuotationService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metric
-        BusinessMetrics.QuotationStatusTransitionsTotal
-            .WithLabels(oldStatus.ToString(), status.ToString())
-            .Inc();
+        _metricsService.RecordQuotationStatusTransition(oldStatus.ToString(), status.ToString());
 
         _logger.LogInformation("Updated quotation {QuotationId} status from {OldStatus} to {NewStatus}",
             quotationId, oldStatus, status);
@@ -347,10 +350,8 @@ public class QuotationService : IQuotationService
         await _context.SaveChangesAsync(cancellationToken);
 
         // Emit metrics
-        BusinessMetrics.QuotationApprovalsTotal.Inc();
-        BusinessMetrics.QuotationStatusTransitionsTotal
-            .WithLabels(oldStatus.ToString(), QuotationStatus.Approved.ToString())
-            .Inc();
+        _metricsService.RecordQuotationApproved();
+        _metricsService.RecordQuotationStatusTransition(oldStatus.ToString(), QuotationStatus.Approved.ToString());
 
         _logger.LogInformation(
             "Quotation {QuotationId} approved by {UserId}. Status changed from {OldStatus} to {NewStatus}",
