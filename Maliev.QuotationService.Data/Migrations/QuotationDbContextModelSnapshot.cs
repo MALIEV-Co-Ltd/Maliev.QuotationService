@@ -27,51 +27,67 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<int>("ActionType")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("action_type");
 
                     b.Property<string>("ChangedFields")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("changed_fields");
 
                     b.Property<Guid>("EntityId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
 
                     b.Property<int>("EntityType")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("entity_type");
 
                     b.Property<string>("IpAddress")
                         .HasMaxLength(45)
-                        .HasColumnType("character varying(45)");
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("ip_address");
 
                     b.Property<DateTime>("Timestamp")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("timestamp")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("UserAgent")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("user_agent");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_audit_log_entries");
 
-                    b.HasIndex("ActionType");
+                    b.HasIndex("ActionType")
+                        .HasDatabaseName("ix_audit_log_entries_action_type");
 
-                    b.HasIndex("EntityId");
+                    b.HasIndex("EntityId")
+                        .HasDatabaseName("ix_audit_log_entries_entity_id");
 
-                    b.HasIndex("EntityType");
+                    b.HasIndex("EntityType")
+                        .HasDatabaseName("ix_audit_log_entries_entity_type");
 
-                    b.HasIndex("Timestamp");
+                    b.HasIndex("Timestamp")
+                        .HasDatabaseName("ix_audit_log_entries_timestamp");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_audit_log_entries_user_id");
 
-                    b.HasIndex("EntityType", "EntityId", "Timestamp");
+                    b.HasIndex("EntityType", "EntityId", "Timestamp")
+                        .HasDatabaseName("ix_audit_log_entries_entity_type_entity_id_timestamp");
 
                     b.ToTable("audit_log_entries", (string)null);
                 });
@@ -80,56 +96,72 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("ContactInfo")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("contact_info");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<string>("Email")
                         .HasMaxLength(320)
-                        .HasColumnType("character varying(320)");
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("MergeHistory")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("merge_history");
 
                     b.PrimitiveCollection<List<Guid>>("MergedFromIds")
-                        .HasColumnType("uuid[]");
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("merged_from_ids");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
 
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("phone_number");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_customers");
 
                     b.HasIndex("Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_customers_email");
 
-                    b.HasIndex("IsDeleted");
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_customers_is_deleted");
 
-                    b.HasIndex("Name");
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_customers_name");
 
-                    b.HasIndex("PhoneNumber");
+                    b.HasIndex("PhoneNumber")
+                        .HasDatabaseName("ix_customers_phone_number");
 
                     b.ToTable("customers", (string)null);
                 });
@@ -138,29 +170,37 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("AuthorizationReason")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("authorization_reason");
 
                     b.Property<string>("Conditions")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("conditions");
 
                     b.Property<int>("DiscountType")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("discount_type");
 
                     b.Property<decimal>("DiscountValue")
                         .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("discount_value");
 
                     b.Property<Guid>("QuotationVersionId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("quotation_version_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_discount_structures");
 
-                    b.HasIndex("QuotationVersionId");
+                    b.HasIndex("QuotationVersionId")
+                        .HasDatabaseName("ix_discount_structures_quotation_version_id");
 
                     b.ToTable("discount_structures", (string)null);
                 });
@@ -169,49 +209,61 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
 
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("file_type");
 
                     b.Property<Guid?>("QuotationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("quotation_id");
 
                     b.Property<Guid?>("RfqId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("rfq_id");
 
                     b.Property<Guid>("UploadServiceFileId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("upload_service_file_id");
 
                     b.Property<DateTime>("UploadedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploaded_at")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("UploadedByUserId")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("uploaded_by_user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_file_references");
 
-                    b.HasIndex("QuotationId");
+                    b.HasIndex("QuotationId")
+                        .HasDatabaseName("ix_file_references_quotation_id");
 
-                    b.HasIndex("RfqId");
+                    b.HasIndex("RfqId")
+                        .HasDatabaseName("ix_file_references_rfq_id");
 
                     b.HasIndex("UploadServiceFileId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_file_references_upload_service_file_id");
 
                     b.ToTable("file_references", null, t =>
                         {
-                            t.HasCheckConstraint("CK_FileReference_Entity", "(\"RfqId\" IS NOT NULL AND \"QuotationId\" IS NULL) OR (\"RfqId\" IS NULL AND \"QuotationId\" IS NOT NULL)");
+                            t.HasCheckConstraint("CK_FileReference_Entity", "(\"rfq_id\" IS NOT NULL AND \"quotation_id\" IS NULL) OR (\"rfq_id\" IS NULL AND \"quotation_id\" IS NOT NULL)");
                         });
                 });
 
@@ -219,40 +271,50 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("author_user_id");
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("content");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<Guid?>("QuotationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("quotation_id");
 
                     b.Property<Guid?>("RfqId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("rfq_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_internal_notes");
 
-                    b.HasIndex("CreatedAt");
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_internal_notes_created_at");
 
-                    b.HasIndex("QuotationId");
+                    b.HasIndex("QuotationId")
+                        .HasDatabaseName("ix_internal_notes_quotation_id");
 
-                    b.HasIndex("RfqId");
+                    b.HasIndex("RfqId")
+                        .HasDatabaseName("ix_internal_notes_rfq_id");
 
                     b.ToTable("internal_notes", null, t =>
                         {
-                            t.HasCheckConstraint("CK_InternalNote_Entity", "(\"RfqId\" IS NOT NULL AND \"QuotationId\" IS NULL) OR (\"RfqId\" IS NULL AND \"QuotationId\" IS NOT NULL)");
+                            t.HasCheckConstraint("CK_InternalNote_Entity", "(\"rfq_id\" IS NOT NULL AND \"quotation_id\" IS NULL) OR (\"rfq_id\" IS NULL AND \"quotation_id\" IS NOT NULL)");
                         });
                 });
 
@@ -260,46 +322,59 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<int>("AvailabilityStatus")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("availability_status");
 
                     b.Property<DateTime>("CachedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cached_at")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<string>("MaterialCategory")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("material_category");
 
                     b.Property<string>("MaterialName")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("material_name");
 
                     b.Property<Guid>("MaterialServiceId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("material_service_id");
 
                     b.Property<string>("MechanicalProperties")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("mechanical_properties");
 
                     b.Property<string>("PhysicalProperties")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("physical_properties");
 
                     b.PrimitiveCollection<List<string>>("SupportedProcesses")
-                        .HasColumnType("text[]");
+                        .HasColumnType("text[]")
+                        .HasColumnName("supported_processes");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_material_references");
 
-                    b.HasIndex("ExpiresAt");
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_material_references_expires_at");
 
                     b.HasIndex("MaterialServiceId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_material_references_material_service_id");
 
                     b.ToTable("material_references", (string)null);
                 });
@@ -308,60 +383,79 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<Guid?>("CurrentVersionId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("current_version_id");
 
                     b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
 
                     b.Property<Guid?>("SourceRfqId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_rfq_id");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<DateOnly>("ValidityPeriodEnd")
-                        .HasColumnType("date");
+                        .HasColumnType("date")
+                        .HasColumnName("validity_period_end");
 
                     b.Property<DateOnly>("ValidityPeriodStart")
-                        .HasColumnType("date");
+                        .HasColumnType("date")
+                        .HasColumnName("validity_period_start");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_quotations");
 
-                    b.HasIndex("CurrentVersionId");
+                    b.HasIndex("CurrentVersionId")
+                        .HasDatabaseName("ix_quotations_current_version_id");
 
-                    b.HasIndex("CustomerId");
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_quotations_customer_id");
 
-                    b.HasIndex("IsDeleted");
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_quotations_is_deleted");
 
-                    b.HasIndex("SourceRfqId");
+                    b.HasIndex("SourceRfqId")
+                        .HasDatabaseName("ix_quotations_source_rfq_id");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_quotations_status");
 
-                    b.HasIndex("ValidityPeriodEnd");
+                    b.HasIndex("ValidityPeriodEnd")
+                        .HasDatabaseName("ix_quotations_validity_period_end");
 
                     b.ToTable("quotations", (string)null);
                 });
@@ -370,54 +464,68 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<int>("LineNumber")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("line_number");
 
                     b.Property<decimal>("LineTotal")
                         .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("line_total");
 
                     b.Property<string>("ManufacturingProcess")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("manufacturing_process");
 
                     b.Property<string>("MaterialName")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("material_name");
 
                     b.Property<string>("MaterialProperties")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("material_properties");
 
                     b.Property<Guid>("MaterialServiceId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("material_service_id");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("notes");
 
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("quantity");
 
                     b.Property<string>("QuantityUnit")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("quantity_unit");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("unit_price");
 
                     b.Property<Guid>("VersionId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_quotation_line_items");
 
                     b.HasIndex("VersionId", "LineNumber")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_quotation_line_items_version_id_line_number");
 
                     b.ToTable("quotation_line_items", (string)null);
                 });
@@ -426,48 +534,60 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("ChangeSummary")
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("change_summary");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("CreatedByUserId")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by_user_id");
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency_code");
 
                     b.Property<string>("DeliveryExpectations")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("delivery_expectations");
 
                     b.Property<Guid>("QuotationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("quotation_id");
 
                     b.Property<string>("SpecialTerms")
                         .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("special_terms");
 
                     b.Property<decimal>("TotalPrice")
                         .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total_price");
 
                     b.Property<int>("VersionNumber")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("version_number");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_quotation_versions");
 
                     b.HasIndex("QuotationId", "VersionNumber")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_quotation_versions_quotation_id_version_number");
 
                     b.ToTable("quotation_versions", (string)null);
                 });
@@ -476,60 +596,80 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("AssignedStaffUserId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("assigned_staff_user_id");
 
                     b.Property<int>("ChannelSource")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("channel_source");
 
                     b.Property<Guid?>("ConvertedToQuotationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("converted_to_quotation_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("RequestDetails")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("request_details");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_rfqs");
 
-                    b.HasIndex("AssignedStaffUserId");
+                    b.HasIndex("AssignedStaffUserId")
+                        .HasDatabaseName("ix_rfqs_assigned_staff_user_id");
 
-                    b.HasIndex("ChannelSource");
+                    b.HasIndex("ChannelSource")
+                        .HasDatabaseName("ix_rfqs_channel_source");
 
-                    b.HasIndex("ConvertedToQuotationId");
+                    b.HasIndex("ConvertedToQuotationId")
+                        .HasDatabaseName("ix_rfqs_converted_to_quotation_id");
 
-                    b.HasIndex("CreatedAt");
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_rfqs_created_at");
 
-                    b.HasIndex("CustomerId");
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_rfqs_customer_id");
 
-                    b.HasIndex("IsDeleted");
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_rfqs_is_deleted");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_rfqs_status");
 
-                    b.HasIndex("ChannelSource", "Status", "CreatedAt");
+                    b.HasIndex("ChannelSource", "Status", "CreatedAt")
+                        .HasDatabaseName("ix_rfqs_channel_source_status_created_at");
 
                     b.ToTable("rfqs", (string)null);
                 });
@@ -538,33 +678,41 @@ namespace Maliev.QuotationService.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
 
                     b.PrimitiveCollection<List<string>>("Permissions")
                         .IsRequired()
-                        .HasColumnType("text[]");
+                        .HasColumnType("text[]")
+                        .HasColumnName("permissions");
 
                     b.Property<string>("RoleName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("role_name");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_staff_roles");
 
                     b.HasIndex("RoleName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_roles_role_name");
 
                     b.ToTable("staff_roles", (string)null);
                 });
@@ -575,7 +723,8 @@ namespace Maliev.QuotationService.Data.Migrations
                         .WithMany("DiscountStructures")
                         .HasForeignKey("QuotationVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_discount_structures_quotation_versions_quotation_version_id");
 
                     b.Navigation("QuotationVersion");
                 });
@@ -585,12 +734,14 @@ namespace Maliev.QuotationService.Data.Migrations
                     b.HasOne("Maliev.QuotationService.Data.Entities.Quotation", "Quotation")
                         .WithMany("FileReferences")
                         .HasForeignKey("QuotationId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_file_references_quotations_quotation_id");
 
                     b.HasOne("Maliev.QuotationService.Data.Entities.Rfq", "Rfq")
                         .WithMany("FileReferences")
                         .HasForeignKey("RfqId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_file_references_rfqs_rfq_id");
 
                     b.Navigation("Quotation");
 
@@ -602,12 +753,14 @@ namespace Maliev.QuotationService.Data.Migrations
                     b.HasOne("Maliev.QuotationService.Data.Entities.Quotation", "Quotation")
                         .WithMany("InternalNotes")
                         .HasForeignKey("QuotationId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_internal_notes_quotations_quotation_id");
 
                     b.HasOne("Maliev.QuotationService.Data.Entities.Rfq", "Rfq")
                         .WithMany("InternalNotes")
                         .HasForeignKey("RfqId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_internal_notes_rfqs_rfq_id");
 
                     b.Navigation("Quotation");
 
@@ -619,18 +772,21 @@ namespace Maliev.QuotationService.Data.Migrations
                     b.HasOne("Maliev.QuotationService.Data.Entities.QuotationVersion", "CurrentVersion")
                         .WithMany()
                         .HasForeignKey("CurrentVersionId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_quotations_quotation_versions_current_version_id");
 
                     b.HasOne("Maliev.QuotationService.Data.Entities.Customer", "Customer")
                         .WithMany("Quotations")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_quotations_customers_customer_id");
 
                     b.HasOne("Maliev.QuotationService.Data.Entities.Rfq", "SourceRfq")
                         .WithMany()
                         .HasForeignKey("SourceRfqId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_quotations_rfqs_source_rfq_id");
 
                     b.Navigation("CurrentVersion");
 
@@ -645,7 +801,8 @@ namespace Maliev.QuotationService.Data.Migrations
                         .WithMany("LineItems")
                         .HasForeignKey("VersionId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_quotation_line_items_quotation_versions_version_id");
 
                     b.Navigation("Version");
                 });
@@ -656,7 +813,8 @@ namespace Maliev.QuotationService.Data.Migrations
                         .WithMany("Versions")
                         .HasForeignKey("QuotationId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_quotation_versions_quotations_quotation_id");
 
                     b.Navigation("Quotation");
                 });
@@ -666,13 +824,15 @@ namespace Maliev.QuotationService.Data.Migrations
                     b.HasOne("Maliev.QuotationService.Data.Entities.Quotation", "ConvertedToQuotation")
                         .WithMany()
                         .HasForeignKey("ConvertedToQuotationId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_rfqs_quotations_converted_to_quotation_id");
 
                     b.HasOne("Maliev.QuotationService.Data.Entities.Customer", "Customer")
                         .WithMany("Rfqs")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_rfqs_customers_customer_id");
 
                     b.Navigation("ConvertedToQuotation");
 
