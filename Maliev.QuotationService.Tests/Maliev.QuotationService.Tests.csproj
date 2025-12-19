@@ -32,6 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj" />
     <ProjectReference Include="..\Maliev.QuotationService.Data\Maliev.QuotationService.Data.csproj" />
+    <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,10 +2,12 @@ using System.Net.Http.Headers;
 using Maliev.QuotationService.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace Maliev.QuotationService.Tests.Fixtures;
 
-public abstract class BaseIntegrationTest : IClassFixture<IntegrationTestWebAppFactory>, IAsyncLifetime
+[Collection(nameof(IntegrationTestCollection))]
+public abstract class BaseIntegrationTest : IAsyncLifetime
 {
     protected readonly IntegrationTestWebAppFactory Factory;
     protected readonly HttpClient Client;
@@ -18,6 +20,9 @@ public abstract class BaseIntegrationTest : IClassFixture<IntegrationTestWebAppF
         Client = factory.CreateClient();
         Scope = factory.Services.CreateScope();
         DbContext = Scope.ServiceProvider.GetRequiredService<QuotationDbContext>();
+
+        // Clean database for test isolation using TRUNCATE (not DROP/CREATE)
+        Factory.CleanDatabaseAsync().GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -36,29 +41,12 @@ public abstract class BaseIntegrationTest : IClassFixture<IntegrationTestWebAppF
 
     public virtual Task InitializeAsync() => Task.CompletedTask;
 
-    public virtual async Task DisposeAsync()
+    public virtual Task DisposeAsync()
     {
-        // Clean up database after each test to ensure isolation
-        // Clear the change tracker to avoid navigation fixup issues
-        DbContext.ChangeTracker.Clear();
-
-        // Delete all data from tables in correct order (respecting foreign keys)
-        // First null out CurrentVersionId to avoid FK constraint violations
-        await DbContext.Database.ExecuteSqlAsync($"UPDATE quotations SET \"CurrentVersionId\" = NULL");
-
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM file_references");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM internal_notes");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM discount_structures");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM quotation_line_items");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM quotation_versions");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM quotations");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM material_references");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM rfqs");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM customers");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM staff_roles");
-        await DbContext.Database.ExecuteSqlAsync($"DELETE FROM audit_log_entries");
-
+        // Cleanup is handled by next test's constructor via Factory.CleanDatabaseAsync()
+        // This avoids connection issues with TRUNCATE CASCADE on active connections
         Scope.Dispose();
         Client.Dispose();
+        return Task.CompletedTask;
     }
 }
