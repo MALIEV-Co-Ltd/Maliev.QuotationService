@@ -12,7 +12,7 @@ public class FileReferenceConfiguration : IEntityTypeConfiguration<FileReference
         {
             t.HasCheckConstraint(
                 "CK_FileReference_Entity",
-                "(\"RfqId\" IS NOT NULL AND \"QuotationId\" IS NULL) OR (\"RfqId\" IS NULL AND \"QuotationId\" IS NOT NULL)"
+                "(\"rfq_id\" IS NOT NULL AND \"quotation_id\" IS NULL) OR (\"rfq_id\" IS NULL AND \"quotation_id\" IS NOT NULL)"
             );
         });
 

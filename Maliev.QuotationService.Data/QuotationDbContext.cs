@@ -1,5 +1,6 @@
 using Maliev.QuotationService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Maliev.Aspire.ServiceDefaults.Database;
 
 namespace Maliev.QuotationService.Data;
 
@@ -28,6 +29,9 @@ public class QuotationDbContext : DbContext
 
         // Apply all configurations from the current assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(QuotationDbContext).Assembly);
+
+        // Apply PostgreSQL snake_case naming convention globally
+        SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

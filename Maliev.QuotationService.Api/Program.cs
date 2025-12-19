@@ -12,13 +12,13 @@ builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if ava
 
 // --- Infrastructure & Observability ---
 builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
-builder.AddServiceMeters("quotation"); // Register service meters for OpenTelemetry business metrics
+builder.AddServiceMeters("quotations-meter"); // Register service meters for OpenTelemetry business metrics
 
 // Add database context
 builder.AddPostgresDbContext<QuotationDbContext>("QuotationDbContext");
 
 // Add caching (Redis or in-memory fallback)
-builder.AddRedisDistributedCache("Quotation");
+builder.AddRedisDistributedCache("quotation:");
 
 // Add message bus (RabbitMQ or in-memory fallback)
 builder.AddMassTransitWithRabbitMq();
@@ -118,7 +118,7 @@ app.MapGet("/", () => Results.Redirect("/quotation"));
 
 app.MapControllers();
 
-app.MapDefaultEndpoints("quotation");
+app.MapDefaultEndpoints(servicePrefix: "quotation");
 
 // Map OpenAPI and Scalar documentation (dev/staging only)
 app.MapApiDocumentation(servicePrefix: "quotation");
