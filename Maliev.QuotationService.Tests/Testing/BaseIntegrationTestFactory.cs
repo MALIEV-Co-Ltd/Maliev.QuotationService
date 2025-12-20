@@ -40,6 +40,10 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     /// </summary>
     protected virtual string DbConnectionStringName => typeof(TDbContext).Name;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BaseIntegrationTestFactory{TProgram, TDbContext}"/> class.
+    /// Sets up the container builders for PostgreSQL, Redis, and RabbitMQ.
+    /// </summary>
     public BaseIntegrationTestFactory()
     {
         _postgresContainer = new PostgreSqlBuilder()
@@ -63,6 +67,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
     }
 
+    /// <summary>
+    /// Starts the Docker containers and applies database migrations.
+    /// </summary>
     public async Task InitializeAsync()
     {
         if (_containersStarted)
@@ -92,6 +99,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         _containersStarted = true;
     }
 
+    /// <summary>
+    /// Disposes of the Docker containers and cleans up environment variables.
+    /// </summary>
     public new async Task DisposeAsync()
     {
         await _postgresContainer.DisposeAsync();
@@ -102,6 +112,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         await base.DisposeAsync();
     }
 
+    /// <inheritdoc />
     protected override IHost CreateHost(IHostBuilder builder)
     {
         if (!_containersStarted)
@@ -118,6 +129,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         return base.CreateHost(builder);
     }
 
+    /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureTestServices(services =>
@@ -147,15 +159,31 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         });
     }
 
+    /// <summary>
+    /// Override this method to set additional environment variables before host creation.
+    /// </summary>
     protected virtual void ConfigureEnvironmentVariables() { }
+
+    /// <summary>
+    /// Override this method to add additional test services to the DI container.
+    /// </summary>
+    /// <param name="services">The service collection</param>
     protected virtual void ConfigureAdditionalServices(IServiceCollection services) { }
 
+    /// <summary>
+    /// Gets the DbContext from the service provider for use in tests.
+    /// </summary>
+    /// <returns>The DbContext instance</returns>
     public TDbContext GetDbContext()
     {
         var scope = Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<TDbContext>();
     }
 
+    /// <summary>
+    /// Creates a new DbContext instance for testing (not from DI container).
+    /// </summary>
+    /// <returns>A new DbContext instance</returns>
     public TDbContext CreateDbContext()
     {
         var connectionString = _postgresContainer.GetConnectionString();
@@ -165,6 +193,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         return (TDbContext)Activator.CreateInstance(typeof(TDbContext), optionsBuilder.Options)!;
     }
 
+    /// <summary>
+    /// Applies all pending migrations to the test database.
+    /// </summary>
     private async Task ApplyMigrationsAsync()
     {
         try
@@ -181,6 +212,10 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         }
     }
 
+    /// <summary>
+    /// Cleans all data from the database while preserving schema.
+    /// Queries the database schema dynamically to get all tables.
+    /// </summary>
     public async Task CleanDatabaseAsync()
     {
         await using var context = CreateDbContext();
@@ -207,9 +242,19 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         }
     }
 
+    /// <summary>
+    /// Resets the database state. Alias for <see cref="CleanDatabaseAsync"/>.
+    /// </summary>
     public Task ResetDatabaseAsync() => CleanDatabaseAsync();
+
+    /// <summary>
+    /// Clears the database state. Alias for <see cref="CleanDatabaseAsync"/>.
+    /// </summary>
     public Task ClearDatabaseAsync() => CleanDatabaseAsync();
 
+    /// <summary>
+    /// Clears the in-memory cache.
+    /// </summary>
     public void ClearCache()
     {
         var memoryCache = Services.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
@@ -219,8 +264,18 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         }
     }
 
+    /// <summary>
+    /// Gets the RSA signing credentials for JWT token creation.
+    /// </summary>
     public SigningCredentials SigningCredentials => new SigningCredentials(new RsaSecurityKey(_testRsa), SecurityAlgorithms.RsaSha256);
 
+    /// <summary>
+    /// Creates a test JWT token for authentication in integration tests.
+    /// </summary>
+    /// <param name="userId">User ID to include in token</param>
+    /// <param name="roles">Roles to include in token claims</param>
+    /// <param name="additionalClaims">Additional claims to include</param>
+    /// <returns>JWT token string</returns>
     public string CreateTestJwtToken(
         string userId = "test-user",
         string[]? roles = null,
@@ -260,11 +315,23 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <summary>
+    /// Simplified JWT token generator with role parameter.
+    /// </summary>
+    /// <param name="userId">User ID to include in token</param>
+    /// <param name="role">User role</param>
+    /// <returns>JWT token string</returns>
     public string GenerateTestToken(string userId = "test-user", string role = "admin")
     {
         return CreateTestJwtToken(userId, new[] { role });
     }
 
+    /// <summary>
+    /// Creates an HTTP client with authenticated user and specified roles.
+    /// </summary>
+    /// <param name="userId">User ID for the token</param>
+    /// <param name="roles">User roles</param>
+    /// <returns>HttpClient with Authorization header set</returns>
     public HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null)
     {
         var token = CreateTestJwtToken(userId, roles);
