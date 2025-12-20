@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
@@ -43,7 +43,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     public BaseIntegrationTestFactory()
     {
         _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:18-alpine")
+            .WithImage("postgres:16-alpine")
             .Build();
 
         _redisContainer = new RedisBuilder()
@@ -51,7 +51,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             .Build();
 
         _rabbitmqContainer = new RabbitMqBuilder()
-            .WithImage("rabbitmq:4.2.1-alpine")
+            .WithImage("rabbitmq:4.0-alpine")
             .Build();
 
         _testRsa = RSA.Create(2048);
@@ -199,8 +199,16 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     /// </summary>
     private async Task ApplyMigrationsAsync()
     {
-        await using var context = CreateDbContext();
-        await context.Database.MigrateAsync();
+        try
+        {
+            await using var context = CreateDbContext();
+            await context.Database.MigrateAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error applying migrations: {ex}");
+            throw;
+        }
     }
 
     /// <summary>
