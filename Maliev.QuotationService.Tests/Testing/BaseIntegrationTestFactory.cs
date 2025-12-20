@@ -44,6 +44,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     {
         _postgresContainer = new PostgreSqlBuilder()
             .WithImage("postgres:16-alpine")
+            .WithDatabase("quotation_tests")
+            .WithUsername("postgres")
+            .WithPassword("postgres")
             .Build();
 
         _redisContainer = new RedisBuilder()
@@ -202,11 +205,18 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         try
         {
             await using var context = CreateDbContext();
+            var connectionString = context.Database.GetConnectionString();
+            Console.WriteLine($"[TestFactory] Applying migrations to: {connectionString}");
+            
+            var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+            Console.WriteLine($"[TestFactory] Pending migrations: {string.Join(", ", pendingMigrations)}");
+
             await context.Database.MigrateAsync();
+            Console.WriteLine("[TestFactory] Migrations applied successfully.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error applying migrations: {ex}");
+            Console.WriteLine($"[TestFactory] Error applying migrations: {ex}");
             throw;
         }
     }
