@@ -193,7 +193,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     {
         var connectionString = _postgresContainer.GetConnectionString();
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
-        optionsBuilder.UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(TDbContext).Assembly.GetName().Name));
+        optionsBuilder.UseNpgsql(connectionString);
         return (TDbContext)Activator.CreateInstance(typeof(TDbContext), optionsBuilder.Options)!;
     }
 
@@ -208,6 +208,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             var connectionString = context.Database.GetConnectionString();
             Console.WriteLine($"[TestFactory] Applying migrations to: {connectionString}");
             
+            var allMigrations = context.Database.GetMigrations();
+            Console.WriteLine($"[TestFactory] All migrations in assembly: {string.Join(", ", allMigrations)}");
+
             var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
             Console.WriteLine($"[TestFactory] Pending migrations: {string.Join(", ", pendingMigrations)}");
 

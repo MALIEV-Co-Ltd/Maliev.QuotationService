@@ -6,7 +6,7 @@ namespace Maliev.QuotationService.Tests.Fixtures;
 /// Collection definition to ensure all integration tests share the same test factory instance.
 /// This prevents creating multiple PostgreSQL/Redis/RabbitMQ containers and improves test performance.
 /// </summary>
-[CollectionDefinition(nameof(IntegrationTestCollection))]
+[CollectionDefinition(nameof(IntegrationTestCollection), DisableParallelization = true)]
 public class IntegrationTestCollection : ICollectionFixture<IntegrationTestWebAppFactory>
 {
     // This class has no code, and is never created. Its purpose is simply
