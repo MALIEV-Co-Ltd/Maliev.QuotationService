@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Maliev.QuotationService.Api.Configuration.Extensions;
 using Maliev.QuotationService.Api.Middleware;
 using Maliev.QuotationService.Api.Services.Metrics;
