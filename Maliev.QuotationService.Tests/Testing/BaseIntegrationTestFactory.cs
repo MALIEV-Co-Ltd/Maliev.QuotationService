@@ -193,7 +193,8 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     {
         var connectionString = _postgresContainer.GetConnectionString();
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
-        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseNpgsql(connectionString, npgsqlOptions => 
+            npgsqlOptions.MigrationsAssembly(typeof(TDbContext).Assembly.GetName().Name));
         return (TDbContext)Activator.CreateInstance(typeof(TDbContext), optionsBuilder.Options)!;
     }
 
@@ -208,6 +209,13 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             var connectionString = context.Database.GetConnectionString();
             Console.WriteLine($"[TestFactory] Applying migrations to: {connectionString}");
             
+            var assembly = typeof(TDbContext).Assembly;
+            Console.WriteLine($"[TestFactory] Context Assembly: {assembly.FullName}");
+            Console.WriteLine($"[TestFactory] Context Assembly Location: {assembly.Location}");
+            
+            var allTypes = assembly.GetTypes().Select(t => t.Name).ToList();
+            Console.WriteLine($"[TestFactory] Types in assembly: {string.Join(", ", allTypes.Where(n => n.Contains("InitialCreate") || n.Contains("Migration")))}");
+
             var allMigrations = context.Database.GetMigrations();
             Console.WriteLine($"[TestFactory] All migrations in assembly: {string.Join(", ", allMigrations)}");
 
