@@ -126,7 +126,15 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
 
         ConfigureEnvironmentVariables();
 
-        return base.CreateHost(builder);
+        var host = base.CreateHost(builder);
+
+        using (var scope = host.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
+            Console.WriteLine($"[TestFactory] App DbContext connection string: {dbContext.Database.GetConnectionString()}");
+        }
+
+        return host;
     }
 
     /// <inheritdoc />
@@ -204,6 +212,12 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             Console.WriteLine($"[TestFactory] Applying migrations to: {context.Database.GetConnectionString()}");
             await context.Database.MigrateAsync();
             Console.WriteLine("[TestFactory] Migrations applied successfully.");
+
+            // Verify tables exist
+            var tables = await context.Database
+                .SqlQueryRaw<string>("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+                .ToListAsync();
+            Console.WriteLine($"[TestFactory] Tables in database after migration: {string.Join(", ", tables)}");
         }
         catch (Exception ex)
         {
