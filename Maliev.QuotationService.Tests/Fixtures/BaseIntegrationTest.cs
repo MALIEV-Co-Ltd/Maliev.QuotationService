@@ -20,9 +20,6 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         Client = factory.CreateClient();
         Scope = factory.Services.CreateScope();
         DbContext = Scope.ServiceProvider.GetRequiredService<QuotationDbContext>();
-
-        // Clean database for test isolation using TRUNCATE (not DROP/CREATE)
-        Factory.CleanDatabaseAsync().GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -39,7 +36,13 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         return client;
     }
 
-    public virtual Task InitializeAsync() => Task.CompletedTask;
+    public virtual async Task InitializeAsync()
+    {
+        // Ensure containers are started and migrations applied
+        await Factory.InitializeAsync();
+        // Clean database for test isolation
+        await Factory.CleanDatabaseAsync();
+    }
 
     public virtual Task DisposeAsync()
     {
