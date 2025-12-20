@@ -52,7 +52,6 @@ bld/
 [Ll]ogs/
 
 # Entity Framework Migrations (generated)
-**/Migrations/*.Designer.cs
 **/Migrations/*.cs.bak
 
 # User-specific files
