@@ -8,8 +8,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
@@ -45,7 +43,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     public BaseIntegrationTestFactory()
     {
         _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+            .WithImage("postgres:18-alpine")
             .WithDatabase("quotation_tests")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -78,7 +76,6 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         );
 
         // Set environment variables immediately after containers start
-        // This ensures they are available when Program.Main runs (which happens when .Server is accessed)
         Environment.SetEnvironmentVariable($"ConnectionStrings__{DbConnectionStringName}", _postgresContainer.GetConnectionString());
         Environment.SetEnvironmentVariable("ConnectionStrings__redis", _redisContainer.GetConnectionString());
         Environment.SetEnvironmentVariable("ConnectionStrings__rabbitmq", _rabbitmqContainer.GetConnectionString());
@@ -101,30 +98,21 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         await _redisContainer.DisposeAsync();
         await _rabbitmqContainer.DisposeAsync();
         _testRsa.Dispose();
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null); // Cleanup
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
         await base.DisposeAsync();
     }
 
-
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        // Ensure containers are started before creating host
         if (!_containersStarted)
         {
             InitializeAsync().GetAwaiter().GetResult();
         }
 
-        // Set environment variables BEFORE host builder processes configuration
-        // Note: Connection strings are now injected via ConfigureAppConfiguration in ConfigureWebHost
-        // to ensure they are available during host building causing Program.cs to see them.
-
-
-        // Export RSA public key for JWT validation
         var rsaParams = _testRsa.ExportParameters(false);
         Environment.SetEnvironmentVariable("JWT_PUBLIC_KEY_MODULUS", Convert.ToBase64String(rsaParams.Modulus!));
         Environment.SetEnvironmentVariable("JWT_PUBLIC_KEY_EXPONENT", Convert.ToBase64String(rsaParams.Exponent!));
 
-        // Allow derived classes to set additional environment variables
         ConfigureEnvironmentVariables();
 
         return base.CreateHost(builder);
@@ -134,8 +122,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     {
         builder.ConfigureTestServices(services =>
         {
-            // Configure JWT Bearer authentication with test RSA key
-            services.PostConfigureAll<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(options =>
+            services.PostConfigureAll<JwtBearerOptions>(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -146,51 +133,29 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                     ValidIssuer = "test-issuer",
                     ValidAudience = "test-audience",
                     IssuerSigningKey = new RsaSecurityKey(_testRsa),
-                    ClockSkew = TimeSpan.Zero // No clock skew for tests
+                    ClockSkew = TimeSpan.Zero
                 };
             });
 
-            // Ensure MassTransit waits until started for tests to avoid race conditions
             services.Configure<MassTransitHostOptions>(options =>
             {
                 options.WaitUntilStarted = true;
                 options.StartTimeout = TimeSpan.FromSeconds(30);
             });
 
-            // Allow derived classes to add additional test services
             ConfigureAdditionalServices(services);
         });
     }
 
-    /// <summary>
-    /// Override this method to set additional environment variables before host creation.
-    /// Called after standard environment variables are set.
-    /// </summary>
-    protected virtual void ConfigureEnvironmentVariables()
-    {
-        // Override in derived class if needed
-    }
+    protected virtual void ConfigureEnvironmentVariables() { }
+    protected virtual void ConfigureAdditionalServices(IServiceCollection services) { }
 
-    /// <summary>
-    /// Override this method to add additional test services to the DI container.
-    /// </summary>
-    protected virtual void ConfigureAdditionalServices(IServiceCollection services)
-    {
-        // Override in derived class if needed
-    }
-
-    /// <summary>
-    /// Gets the DbContext from the service provider for use in tests.
-    /// </summary>
     public TDbContext GetDbContext()
     {
         var scope = Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<TDbContext>();
     }
 
-    /// <summary>
-    /// Creates a new DbContext instance for testing (not from DI container).
-    /// </summary>
     public TDbContext CreateDbContext()
     {
         var connectionString = _postgresContainer.GetConnectionString();
@@ -200,36 +165,12 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         return (TDbContext)Activator.CreateInstance(typeof(TDbContext), optionsBuilder.Options)!;
     }
 
-    /// <summary>
-    /// Applies all pending migrations to the test database.
-    /// </summary>
     private async Task ApplyMigrationsAsync()
     {
         try
         {
             await using var context = CreateDbContext();
-            var connectionString = context.Database.GetConnectionString();
-            Console.WriteLine($"[TestFactory] Applying migrations to: {connectionString}");
-            
-            var assembly = typeof(TDbContext).Assembly;
-            Console.WriteLine($"[TestFactory] Context Assembly: {assembly.FullName}");
-            Console.WriteLine($"[TestFactory] Context Assembly Location: {assembly.Location}");
-            
-            var allTypes = assembly.GetTypes().Select(t => t.Name).ToList();
-            Console.WriteLine($"[TestFactory] Types in assembly: {string.Join(", ", allTypes.Where(n => n.Contains("InitialCreate") || n.Contains("Migration")))}");
-
-            using var scope = Services.CreateScope();
-            var migrationsAssembly = context.GetService<IMigrationsAssembly>();
-            Console.WriteLine($"[TestFactory] IMigrationsAssembly type: {migrationsAssembly.GetType().FullName}");
-            Console.WriteLine($"[TestFactory] IMigrationsAssembly assembly: {migrationsAssembly.Assembly.FullName}");
-            Console.WriteLine($"[TestFactory] Migrations in IMigrationsAssembly: {string.Join(", ", migrationsAssembly.Migrations.Keys)}");
-
-            var allMigrations = context.Database.GetMigrations();
-            Console.WriteLine($"[TestFactory] All migrations in assembly: {string.Join(", ", allMigrations)}");
-
-            var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
-            Console.WriteLine($"[TestFactory] Pending migrations: {string.Join(", ", pendingMigrations)}");
-
+            Console.WriteLine($"[TestFactory] Applying migrations to: {context.Database.GetConnectionString()}");
             await context.Database.MigrateAsync();
             Console.WriteLine("[TestFactory] Migrations applied successfully.");
         }
@@ -240,15 +181,10 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         }
     }
 
-    /// <summary>
-    /// Cleans all data from the database while preserving schema.
-    /// Queries the database schema dynamically to get all tables.
-    /// </summary>
     public async Task CleanDatabaseAsync()
     {
         await using var context = CreateDbContext();
 
-        // Get all table names from information_schema
         var tableNames = await context.Database
             .SqlQueryRaw<string>(
                 @"SELECT table_name
@@ -259,7 +195,6 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                   ORDER BY table_name")
             .ToListAsync();
 
-        // Truncate all tables (CASCADE handles foreign keys)
         foreach (var tableName in tableNames)
         {
             try
@@ -268,48 +203,24 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 await context.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE \"{tableName}\" RESTART IDENTITY CASCADE");
 #pragma warning restore EF1002
             }
-            catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01")
-            {
-                // Table doesn't exist - ignore this error
-            }
+            catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01") { }
         }
     }
 
-    /// <summary>
-    /// Alias for CleanDatabaseAsync to support different naming conventions.
-    /// </summary>
     public Task ResetDatabaseAsync() => CleanDatabaseAsync();
-
-    /// <summary>
-    /// Alias for CleanDatabaseAsync to support different naming conventions.
-    /// </summary>
     public Task ClearDatabaseAsync() => CleanDatabaseAsync();
 
-    /// <summary>
-    /// Clears the in-memory cache.
-    /// </summary>
     public void ClearCache()
     {
-        // Get IMemoryCache from services and cast to MemoryCache to access Clear()
         var memoryCache = Services.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
         if (memoryCache is Microsoft.Extensions.Caching.Memory.MemoryCache cache)
         {
-            cache.Compact(1.0); // Compact 100% removes all entries
+            cache.Compact(1.0);
         }
     }
 
-    /// <summary>
-    /// Exposes the RSA signing credentials for JWT token creation in tests.
-    /// </summary>
     public SigningCredentials SigningCredentials => new SigningCredentials(new RsaSecurityKey(_testRsa), SecurityAlgorithms.RsaSha256);
 
-    /// <summary>
-    /// Creates a test JWT token for authentication in integration tests.
-    /// </summary>
-    /// <param name="userId">User ID to include in token</param>
-    /// <param name="roles">Roles to include in token claims</param>
-    /// <param name="additionalClaims">Additional claims to include</param>
-    /// <returns>JWT token string</returns>
     public string CreateTestJwtToken(
         string userId = "test-user",
         string[]? roles = null,
@@ -321,7 +232,6 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
-        // Default to Employee role if no roles specified
         var effectiveRoles = roles ?? new[] { "Employee" };
         foreach (var role in effectiveRoles)
         {
@@ -350,18 +260,11 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    /// <summary>
-    /// Simplified JWT token generator with role parameter.
-    /// Alias for CreateTestJwtToken to support different naming conventions.
-    /// </summary>
     public string GenerateTestToken(string userId = "test-user", string role = "admin")
     {
         return CreateTestJwtToken(userId, new[] { role });
     }
 
-    /// <summary>
-    /// Creates an HTTP client with authenticated user and specified roles.
-    /// </summary>
     public HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null)
     {
         var token = CreateTestJwtToken(userId, roles);
