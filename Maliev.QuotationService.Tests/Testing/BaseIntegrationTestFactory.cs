@@ -218,7 +218,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             var allTypes = assembly.GetTypes().Select(t => t.Name).ToList();
             Console.WriteLine($"[TestFactory] Types in assembly: {string.Join(", ", allTypes.Where(n => n.Contains("InitialCreate") || n.Contains("Migration")))}");
 
-            using var scope = _factory.Services.CreateScope();
+            using var scope = Services.CreateScope();
             var migrationsAssembly = context.GetService<IMigrationsAssembly>();
             Console.WriteLine($"[TestFactory] IMigrationsAssembly type: {migrationsAssembly.GetType().FullName}");
             Console.WriteLine($"[TestFactory] IMigrationsAssembly assembly: {migrationsAssembly.Assembly.FullName}");
