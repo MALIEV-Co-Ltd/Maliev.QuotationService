@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
@@ -215,6 +217,12 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             
             var allTypes = assembly.GetTypes().Select(t => t.Name).ToList();
             Console.WriteLine($"[TestFactory] Types in assembly: {string.Join(", ", allTypes.Where(n => n.Contains("InitialCreate") || n.Contains("Migration")))}");
+
+            using var scope = _factory.Services.CreateScope();
+            var migrationsAssembly = context.GetService<IMigrationsAssembly>();
+            Console.WriteLine($"[TestFactory] IMigrationsAssembly type: {migrationsAssembly.GetType().FullName}");
+            Console.WriteLine($"[TestFactory] IMigrationsAssembly assembly: {migrationsAssembly.Assembly.FullName}");
+            Console.WriteLine($"[TestFactory] Migrations in IMigrationsAssembly: {string.Join(", ", migrationsAssembly.Migrations.Keys)}");
 
             var allMigrations = context.Database.GetMigrations();
             Console.WriteLine($"[TestFactory] All migrations in assembly: {string.Join(", ", allMigrations)}");
