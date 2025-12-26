@@ -39,8 +39,16 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new quotation
+    /// Create a new quotation.
     /// </summary>
+    /// <remarks>
+    /// Initiates a new quotation for a customer. Can optionally be linked to a source RFQ.
+    /// </remarks>
+    /// <param name="request">The quotation details.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Created quotation details.</returns>
+    /// <response code="201">Quotation created successfully.</response>
+    /// <response code="403">If user lacks `quotation.quotations.create` permission.</response>
     [HttpPost]
     [Authorize(Policy = QuotationPermissions.QuotationsCreate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status201Created)]
@@ -82,8 +90,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Get all quotations with optional filtering
+    /// Get all quotations with optional filtering.
     /// </summary>
+    /// <remarks>
+    /// Returns a paginated list of quotations. Supports filtering by status, customer, and date range.
+    /// </remarks>
+    /// <response code="200">List of quotations found.</response>
+    /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpGet]
     [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(List<QuotationResponse>), StatusCodes.Status200OK)]
@@ -119,8 +132,14 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Get quotation by ID
+    /// Get quotation by ID.
     /// </summary>
+    /// <remarks>
+    /// Fetches full details of a specific quotation.
+    /// </remarks>
+    /// <response code="200">Quotation found.</response>
+    /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
+    /// <response code="404">Quotation not found.</response>
     [HttpGet("{id}")]
     [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
@@ -142,8 +161,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Update quotation (creates new version)
+    /// Update quotation.
     /// </summary>
+    /// <remarks>
+    /// Updates the quotation and automatically creates a new version for history tracking.
+    /// </remarks>
+    /// <response code="200">Updated successfully.</response>
+    /// <response code="403">If user lacks `quotation.quotations.update` permission.</response>
     [HttpPut("{id}")]
     [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
@@ -179,8 +203,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Update quotation status
+    /// Update quotation status.
     /// </summary>
+    /// <remarks>
+    /// Allows changing the status (e.g., to Sent, Accepted, or Rejected).
+    /// </remarks>
+    /// <response code="200">Status updated.</response>
+    /// <response code="403">If user lacks `quotation.quotations.update` permission.</response>
     [HttpPatch("{id}/status")]
     [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
@@ -218,8 +247,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Approve a quotation (requires Manager role)
+    /// Approve a quotation.
     /// </summary>
+    /// <remarks>
+    /// **MANAGER ROLE REQUIRED.** Final approval before sending to customer.
+    /// </remarks>
+    /// <response code="200">Approved.</response>
+    /// <response code="403">If user lacks `quotation.quotations.approve` permission.</response>
     [HttpPost("{id}/approve")]
     [Authorize(Policy = QuotationPermissions.QuotationsApprove)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
@@ -256,8 +290,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Add an internal note to a quotation
+    /// Add an internal note to a quotation.
     /// </summary>
+    /// <remarks>
+    /// Internal notes are only visible to employees and managers.
+    /// </remarks>
+    /// <response code="201">Note added.</response>
+    /// <response code="403">If user lacks `quotation.quotations.update` permission.</response>
     [HttpPost("{id}/notes")]
     [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(InternalNoteResponse), StatusCodes.Status201Created)]
@@ -321,8 +360,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Get all versions of a quotation
+    /// Get all versions of a quotation.
     /// </summary>
+    /// <remarks>
+    /// Useful for auditing changes over time.
+    /// </remarks>
+    /// <response code="200">Versions found.</response>
+    /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpGet("{id}/versions")]
     [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(List<QuotationVersionResponse>), StatusCodes.Status200OK)]
@@ -344,8 +388,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Get specific version of a quotation
+    /// Get specific version of a quotation.
     /// </summary>
+    /// <remarks>
+    /// Fetches the immutable state of a quotation at a specific point in time.
+    /// </remarks>
+    /// <response code="200">Version found.</response>
+    /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpGet("{id}/versions/{versionNumber}")]
     [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(QuotationVersionResponse), StatusCodes.Status200OK)]
@@ -368,8 +417,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Generate PDF for quotation
+    /// Generate PDF for quotation.
     /// </summary>
+    /// <remarks>
+    /// Creates a formatted PDF document. If no version is specified, uses the current version.
+    /// </remarks>
+    /// <response code="200">PDF file returned.</response>
+    /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpPost("{id}/pdf")]
     [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
@@ -392,8 +446,13 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a quotation
+    /// Delete a quotation.
     /// </summary>
+    /// <remarks>
+    /// Permanently removes a quotation record. Usually restricted to Admin or Manager roles.
+    /// </remarks>
+    /// <response code="204">Successfully deleted.</response>
+    /// <response code="403">If user lacks `quotation.quotations.delete` permission.</response>
     [HttpDelete("{id}")]
     [Authorize(Policy = QuotationPermissions.QuotationsDelete)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

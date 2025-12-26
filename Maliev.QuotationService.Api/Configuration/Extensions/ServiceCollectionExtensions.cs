@@ -16,27 +16,17 @@ public static class ServiceCollectionExtensions
         // IAM & Authorization
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
-        services.AddHostedService<QuotationIAMRegistrationService>();
+        services.AddIAMRegistration<QuotationIAMRegistrationService>();
 
         return services;
     }
 
     public static IServiceCollection AddExternalServiceClients(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddHttpClient<IMaterialServiceClient, MaterialServiceClient>(client =>
-        {
-            client.BaseAddress = new Uri(configuration["ExternalServices:MaterialService:BaseUrl"]!);
-        }).AddStandardResilienceHandler();
+        services.AddServiceClient<IMaterialServiceClient, MaterialServiceClient>(configuration, "MaterialService");
 
         // Register IAM HttpClient for use via IHttpClientFactory
-        services.AddHttpClient("IAM", client =>
-        {
-            var baseUrl = configuration["ExternalServices:IAM:BaseUrl"];
-            if (!string.IsNullOrEmpty(baseUrl))
-            {
-                client.BaseAddress = new Uri(baseUrl);
-            }
-        }).AddStandardResilienceHandler();
+        services.AddServiceClient(configuration, "IAMService");
 
         return services;
     }
