@@ -1,4 +1,4 @@
-﻿namespace Maliev.QuotationService.Tests;
+namespace Maliev.QuotationService.Tests;
 
 public class UnitTest1
 {

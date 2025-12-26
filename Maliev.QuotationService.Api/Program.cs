@@ -1,7 +1,6 @@
 using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Maliev.QuotationService.Api.Configuration.Extensions;
-using Maliev.QuotationService.Api.Middleware;
 using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Scalar.AspNetCore;
@@ -13,10 +12,14 @@ builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if ava
 
 // --- Infrastructure & Observability ---
 builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
+builder.AddStandardMiddleware(options =>
+{
+    options.EnableRequestLogging = true;
+});
 builder.AddServiceMeters("quotations-meter"); // Register service meters for OpenTelemetry business metrics
 
 // Add database context
-builder.AddPostgresDbContext<QuotationDbContext>(connectionStringName: "QuotationDbContext");
+builder.AddPostgresDbContext<QuotationDbContext>("QuotationDbContext");
 
 // Add caching (Redis or in-memory fallback)
 builder.AddRedisDistributedCache("quotation:");
@@ -31,17 +34,9 @@ builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
 // Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
 if (!builder.Environment.IsProduction())
 {
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddOpenApi("v1", options =>
-    {
-        options.AddDocumentTransformer((document, context, cancellationToken) =>
-        {
-            document.Info.Title = "MALIEV Quotation Service API";
-            document.Info.Version = "v1";
-            document.Info.Description = "Quotation and RFQ management service.";
-            return Task.CompletedTask;
-        });
-    });
+    builder.AddStandardOpenApi(
+        title: "MALIEV Quotation Service API",
+        description: "Quotation and RFQ management service. Handles quotation creation, editing, and tracking.");
 }
 
 // Add external service clients with resilience
@@ -103,14 +98,14 @@ if (!app.Environment.IsEnvironment("Testing"))
 }
 
 // Configure middleware pipeline
-app.UseMiddleware<RequestLoggingMiddleware>();
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseStandardMiddleware();
 
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors();
 
 app.UseAuthentication();
+app.UseMiddleware<Maliev.QuotationService.Api.Middleware.AuthorizationAuditMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
 

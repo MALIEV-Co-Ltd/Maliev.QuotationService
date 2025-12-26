@@ -63,78 +63,94 @@ public class QuotationService : IQuotationService
             }
         }
 
-        // Create quotation
-        var quotation = new Quotation
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            Id = Guid.NewGuid(),
-            CustomerId = customerId,
-            SourceRfqId = sourceRfqId,
-            Status = QuotationStatus.Draft,
-            ValidityPeriodStart = DateOnly.FromDateTime(validityPeriodStart),
-            ValidityPeriodEnd = DateOnly.FromDateTime(validityPeriodEnd),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        _context.Quotations.Add(quotation);
-
-        // Save quotation first without CurrentVersionId to avoid circular dependency
-        await _context.SaveChangesAsync(cancellationToken);
-
-        // Create first version after quotation is saved
-        var version = await CreateVersionAsync(
-            quotation.Id,
-            1,
-            lineItems,
-            deliveryExpectations,
-            currentUserId,
-            discountStructure,
-            "Initial version",
-            cancellationToken);
-
-        // Now update the quotation with the current version ID
-        quotation.CurrentVersionId = version.Id;
-
-        // Update RFQ if linked
-        if (sourceRfqId.HasValue)
-        {
-            var rfq = await _context.Rfqs.FindAsync(new object[] { sourceRfqId.Value }, cancellationToken);
-            if (rfq != null)
+            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                rfq.ConvertedToQuotationId = quotation.Id;
-                rfq.Status = RfqStatus.Converted;
-                rfq.UpdatedAt = DateTime.UtcNow;
+                // Create quotation
+                var quotation = new Quotation
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customerId,
+                    SourceRfqId = sourceRfqId,
+                    Status = QuotationStatus.Draft,
+                    ValidityPeriodStart = DateOnly.FromDateTime(validityPeriodStart),
+                    ValidityPeriodEnd = DateOnly.FromDateTime(validityPeriodEnd),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Quotations.Add(quotation);
+
+                // Save quotation first without CurrentVersionId to avoid circular dependency
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // Create first version after quotation is saved
+                var version = await CreateVersionAsync(
+                    quotation.Id,
+                    1,
+                    lineItems,
+                    deliveryExpectations,
+                    currentUserId,
+                    discountStructure,
+                    "Initial version",
+                    cancellationToken);
+
+                // Now update the quotation with the current version ID
+                quotation.CurrentVersionId = version.Id;
+
+                // Update RFQ if linked
+                if (sourceRfqId.HasValue)
+                {
+                    var rfq = await _context.Rfqs.FindAsync(new object[] { sourceRfqId.Value }, cancellationToken);
+                    if (rfq != null)
+                    {
+                        rfq.ConvertedToQuotationId = quotation.Id;
+                        rfq.Status = RfqStatus.Converted;
+                        rfq.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
+
+                // Create audit log entry
+                var auditEntry = new AuditLogEntry
+                {
+                    Id = Guid.NewGuid(),
+                    EntityType = AuditEntityType.Quotation,
+                    EntityId = quotation.Id,
+                    UserId = currentUserId,
+                    ActionType = AuditActionType.Create,
+                    Timestamp = DateTime.UtcNow,
+                    ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+                    {
+                        CustomerId = customerId,
+                        SourceRfqId = sourceRfqId,
+                        Status = QuotationStatus.Draft.ToString()
+                    }))
+                };
+
+                _context.AuditLogEntries.Add(auditEntry);
+
+                // Save version, audit entry, and updated quotation
+                await _context.SaveChangesAsync(cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+
+                // Emit metric
+                _metricsService.RecordQuotationCreated();
+
+                _logger.LogInformation("Created quotation {QuotationId} for customer {CustomerId}", quotation.Id, customerId);
+
+                return quotation;
             }
-        }
-
-        // Create audit log entry
-        var auditEntry = new AuditLogEntry
-        {
-            Id = Guid.NewGuid(),
-            EntityType = AuditEntityType.Quotation,
-            EntityId = quotation.Id,
-            UserId = currentUserId,
-            ActionType = AuditActionType.Create,
-            Timestamp = DateTime.UtcNow,
-            ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+            catch (Exception ex)
             {
-                CustomerId = customerId,
-                SourceRfqId = sourceRfqId,
-                Status = QuotationStatus.Draft.ToString()
-            }))
-        };
-
-        _context.AuditLogEntries.Add(auditEntry);
-
-        // Save version, audit entry, and updated quotation
-        await _context.SaveChangesAsync(cancellationToken);
-
-        // Emit metric
-        _metricsService.RecordQuotationCreated();
-
-        _logger.LogInformation("Created quotation {QuotationId} for customer {CustomerId}", quotation.Id, customerId);
-
-        return quotation;
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError(ex, "Failed to create quotation for customer {CustomerId}", customerId);
+                throw;
+            }
+        });
     }
 
     public async Task<Quotation?> GetByIdAsync(Guid quotationId, CancellationToken cancellationToken = default)
@@ -145,6 +161,7 @@ public class QuotationService : IQuotationService
                 .ThenInclude(v => v.LineItems)
             .Include(q => q.Versions)
                 .ThenInclude(v => v.DiscountStructures)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(q => q.Id == quotationId, cancellationToken);
     }
 
@@ -369,6 +386,7 @@ public class QuotationService : IQuotationService
             .Include(v => v.LineItems)
             .Include(v => v.DiscountStructures)
             .OrderByDescending(v => v.VersionNumber)
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
     }
 
@@ -380,6 +398,7 @@ public class QuotationService : IQuotationService
         return await _context.QuotationVersions
             .Include(v => v.LineItems)
             .Include(v => v.DiscountStructures)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(v => v.QuotationId == quotationId && v.VersionNumber == versionNumber, cancellationToken);
     }
 
@@ -404,6 +423,26 @@ public class QuotationService : IQuotationService
 
         // Return empty byte array as placeholder
         return Array.Empty<byte>();
+    }
+
+    public async Task DeleteAsync(Guid quotationId, CancellationToken cancellationToken = default)
+    {
+        var quotation = await _context.Quotations
+            .Include(q => q.Versions)
+                .ThenInclude(v => v.LineItems)
+            .Include(q => q.Versions)
+                .ThenInclude(v => v.DiscountStructures)
+            .FirstOrDefaultAsync(q => q.Id == quotationId, cancellationToken);
+
+        if (quotation == null)
+        {
+            throw new KeyNotFoundException($"Quotation with ID {quotationId} not found");
+        }
+
+        _context.Quotations.Remove(quotation);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Deleted quotation {QuotationId}", quotationId);
     }
 
     private async Task<QuotationVersion> CreateVersionAsync(

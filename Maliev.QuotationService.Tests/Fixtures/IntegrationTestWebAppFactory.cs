@@ -14,7 +14,7 @@ public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, 
         base.ConfigureEnvironmentVariables();
 
         // Set dummy URL for MaterialService to prevent constructor injection failures
-        Environment.SetEnvironmentVariable("ExternalServices__MaterialService__BaseUrl", "http://localhost:5002");
+        Environment.SetEnvironmentVariable("MaterialService__BaseUrl", "http://localhost:5002");
     }
 
     protected override void ConfigureAdditionalServices(IServiceCollection services)

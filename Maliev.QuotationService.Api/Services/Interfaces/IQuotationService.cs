@@ -62,4 +62,8 @@ public interface IQuotationService
         Guid quotationId,
         int? versionNumber = null,
         CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(
+        Guid quotationId,
+        CancellationToken cancellationToken = default);
 }

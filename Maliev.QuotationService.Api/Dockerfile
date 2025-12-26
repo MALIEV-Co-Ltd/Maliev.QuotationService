@@ -29,8 +29,8 @@ RUN dotnet publish "Maliev.QuotationService.Api.csproj" -c Release -o /app/publi
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-# Set ownership to built-in app user BEFORE switching user
-COPY --from=publish /app/publish .
+# Copy published application (now owned by app)
+COPY --chown=app:app --from=publish /app/publish .
 RUN chown -R app:app /app
 
 # Switch to non-root app user

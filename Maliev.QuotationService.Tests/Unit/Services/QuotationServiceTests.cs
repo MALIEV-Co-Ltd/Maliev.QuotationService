@@ -21,6 +21,7 @@ public class QuotationServiceTests : IDisposable
     {
         _dbContextOptions = new DbContextOptionsBuilder<QuotationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         _mockLogger = new Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>>();
