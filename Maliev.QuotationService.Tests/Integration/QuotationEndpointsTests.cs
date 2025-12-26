@@ -162,7 +162,7 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         var versions = await response.Content.ReadFromJsonAsync<List<QuotationVersionResponse>>();
         Assert.NotNull(versions);
         Assert.Equal(3, versions.Count);
-        Assert.Collection(versions, 
+        Assert.Collection(versions,
             item => Assert.Equal(3, item.VersionNumber),
             item => Assert.Equal(2, item.VersionNumber),
             item => Assert.Equal(1, item.VersionNumber)

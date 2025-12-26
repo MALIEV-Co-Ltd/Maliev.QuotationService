@@ -38,14 +38,14 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         var permissions = new List<string>();
         foreach (var role in effectiveRoles)
         {
-            if (role == "Admin" || role == "quotation-admin") 
+            if (role == "Admin" || role == "quotation-admin")
                 permissions.AddRange(Maliev.QuotationService.Api.Services.IAM.QuotationPermissions.GetAll());
             else if (role == "Manager" || role == "quotation-manager")
-                permissions.AddRange(new[] { 
-                    "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update", 
+                permissions.AddRange(new[] {
+                    "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update",
                     "quotation.quotations.approve", "quotation.quotations.delete" });
             else if (role == "Employee" || role == "quotation-creator")
-                permissions.AddRange(new[] { 
+                permissions.AddRange(new[] {
                     "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update" });
             else if (role == "Customer" || role == "quotation-viewer")
                 permissions.Add("quotation.quotations.read");
@@ -54,13 +54,13 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         foreach (var perm in permissions.Distinct())
         {
             // Note: Multiple claims with same key are supported by the factory
-            claims.Add($"perm_{perm}", perm); 
+            claims.Add($"perm_{perm}", perm);
         }
 
         // Adjust factory to handle multiple permissions if needed, 
         // but current factory takes Dictionary<string, string> which limits to one value per key.
         // I need to update the factory to support multiple claims of same type.
-        
+
         var token = Factory.CreateTestJwtToken(userId, effectiveRoles, claims.Values.Select(v => new System.Security.Claims.Claim("permissions", v)).ToList());
         var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
