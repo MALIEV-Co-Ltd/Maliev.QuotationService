@@ -206,3 +206,11 @@ FodyWeavers.xsd
 
 # Windows shortcuts
 *.lnk
+
+.claude/settings.local.json
+.gemini/settings.local.json
+
+# Test Outputs
+*test-output.txt
+*_error.txt
+
