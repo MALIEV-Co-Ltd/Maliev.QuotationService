@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
+using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Enums;
@@ -15,7 +16,7 @@ namespace Maliev.QuotationService.Api.Controllers.v1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("quotation/v{version:apiVersion}/rfqs")]
-[Authorize(Policy = "EmployeeOrHigher")]
+[Authorize]
 public class RfqController : ControllerBase
 {
     private readonly IRfqService _rfqService;
@@ -36,6 +37,7 @@ public class RfqController : ControllerBase
     /// Create a new RFQ
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = QuotationPermissions.QuotationsCreate)]
     [ProducesResponseType(typeof(RfqResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RfqResponse>> CreateRfq(
@@ -84,6 +86,7 @@ public class RfqController : ControllerBase
     /// Get all RFQs with optional filtering
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(List<RfqResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<RfqResponse>>> GetRfqs(
         [FromQuery] RfqChannel? channel = null,
@@ -120,6 +123,7 @@ public class RfqController : ControllerBase
     /// Get RFQ by ID
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(RfqResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RfqResponse>> GetRfqById(
@@ -142,6 +146,7 @@ public class RfqController : ControllerBase
     /// Update RFQ details
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(RfqResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RfqResponse>> UpdateRfq(
@@ -176,6 +181,7 @@ public class RfqController : ControllerBase
     /// Update RFQ status
     /// </summary>
     [HttpPatch("{id}/status")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(RfqResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -214,6 +220,7 @@ public class RfqController : ControllerBase
     /// Add internal note to RFQ
     /// </summary>
     [HttpPost("{id}/notes")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(InternalNoteResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<InternalNoteResponse>> AddNote(
@@ -251,7 +258,7 @@ public class RfqController : ControllerBase
     /// Assign RFQ to staff member
     /// </summary>
     [HttpPatch("{id}/assign")]
-    [Authorize(Policy = "Employee")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(RfqResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RfqResponse>> AssignRfq(

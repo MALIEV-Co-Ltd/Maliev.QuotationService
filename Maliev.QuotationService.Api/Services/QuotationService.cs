@@ -406,6 +406,26 @@ public class QuotationService : IQuotationService
         return Array.Empty<byte>();
     }
 
+    public async Task DeleteAsync(Guid quotationId, CancellationToken cancellationToken = default)
+    {
+        var quotation = await _context.Quotations
+            .Include(q => q.Versions)
+                .ThenInclude(v => v.LineItems)
+            .Include(q => q.Versions)
+                .ThenInclude(v => v.DiscountStructures)
+            .FirstOrDefaultAsync(q => q.Id == quotationId, cancellationToken);
+
+        if (quotation == null)
+        {
+            throw new KeyNotFoundException($"Quotation with ID {quotationId} not found");
+        }
+
+        _context.Quotations.Remove(quotation);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Deleted quotation {QuotationId}", quotationId);
+    }
+
     private async Task<QuotationVersion> CreateVersionAsync(
         Guid quotationId,
         int versionNumber,

@@ -16,7 +16,7 @@ builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
 builder.AddServiceMeters("quotations-meter"); // Register service meters for OpenTelemetry business metrics
 
 // Add database context
-builder.AddPostgresDbContext<QuotationDbContext>(connectionStringName: "QuotationDbContext");
+builder.AddPostgresDbContext<QuotationDbContext>(connectionStringName: "QuotationDbContext", enableDynamicJson: false, configureOptions: (Action<IServiceProvider, DbContextOptionsBuilder>?)null);
 
 // Add caching (Redis or in-memory fallback)
 builder.AddRedisDistributedCache("quotation:");
@@ -111,6 +111,7 @@ app.UseRouting();
 app.UseCors();
 
 app.UseAuthentication();
+app.UseMiddleware<AuthorizationAuditMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
 

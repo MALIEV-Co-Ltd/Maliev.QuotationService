@@ -148,6 +148,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         {
             services.PostConfigureAll<JwtBearerOptions>(options =>
             {
+                // Disable claim type mapping to keep original claim names
+                options.MapInboundClaims = false;
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -157,7 +160,37 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                     ValidIssuer = "test-issuer",
                     ValidAudience = "test-audience",
                     IssuerSigningKey = new RsaSecurityKey(_testRsa),
-                    ClockSkew = TimeSpan.Zero
+                    ClockSkew = TimeSpan.Zero,
+                    NameClaimType = JwtRegisteredClaimNames.Sub, // Use "sub" claim as name identifier
+                    RoleClaimType = "role" // Use "role" claim for roles
+                };
+
+                // Add event to transform claims after token validation
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        if (context.Principal?.Identity is ClaimsIdentity identity)
+                        {
+                            // Add ClaimTypes.NameIdentifier claim from "sub"
+                            var subClaim = identity.FindFirst(JwtRegisteredClaimNames.Sub);
+                            if (subClaim != null && !identity.HasClaim(c => c.Type == ClaimTypes.NameIdentifier))
+                            {
+                                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, subClaim.Value));
+                            }
+
+                            // Add ClaimTypes.Role claims from "role"
+                            var roleClaims = identity.FindAll("role").ToList();
+                            foreach (var roleClaim in roleClaims)
+                            {
+                                if (!identity.HasClaim(c => c.Type == ClaimTypes.Role && c.Value == roleClaim.Value))
+                                {
+                                    identity.AddClaim(new Claim(ClaimTypes.Role, roleClaim.Value));
+                                }
+                            }
+                        }
+                        return Task.CompletedTask;
+                    }
                 };
             });
 
@@ -297,7 +330,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     public string CreateTestJwtToken(
         string userId = "test-user",
         string[]? roles = null,
-        Dictionary<string, string>? additionalClaims = null)
+        IEnumerable<Claim>? additionalClaims = null)
     {
         var claims = new List<Claim>
         {
@@ -313,10 +346,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
 
         if (additionalClaims != null)
         {
-            foreach (var (key, value) in additionalClaims)
-            {
-                claims.Add(new Claim(key, value));
-            }
+            claims.AddRange(additionalClaims);
         }
 
         var rsaSecurityKey = new RsaSecurityKey(_testRsa);
@@ -342,6 +372,18 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     public string GenerateTestToken(string userId = "test-user", string role = "admin")
     {
         return CreateTestJwtToken(userId, new[] { role });
+    }
+
+    /// <summary>
+    /// Creates a test JWT token for authentication in integration tests (Legacy support).
+    /// </summary>
+    public string CreateTestJwtToken(
+        string userId,
+        string[]? roles,
+        Dictionary<string, string>? additionalClaims)
+    {
+        var claims = additionalClaims?.Select(kv => new Claim(kv.Key, kv.Value));
+        return CreateTestJwtToken(userId, roles, claims);
     }
 
     /// <summary>

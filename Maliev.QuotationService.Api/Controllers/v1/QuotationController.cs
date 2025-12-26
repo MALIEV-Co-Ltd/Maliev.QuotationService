@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
+using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
@@ -17,7 +18,7 @@ namespace Maliev.QuotationService.Api.Controllers.v1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("quotation/v{version:apiVersion}/quotations")]
-[Authorize(Policy = "EmployeeOrHigher")]
+[Authorize]
 public class QuotationController : ControllerBase
 {
     private readonly IQuotationService _quotationService;
@@ -41,6 +42,7 @@ public class QuotationController : ControllerBase
     /// Create a new quotation
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = QuotationPermissions.QuotationsCreate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<QuotationResponse>> CreateQuotation(
@@ -83,6 +85,7 @@ public class QuotationController : ControllerBase
     /// Get all quotations with optional filtering
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(List<QuotationResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<QuotationResponse>>> GetQuotations(
         [FromQuery] QuotationStatus? status = null,
@@ -119,6 +122,7 @@ public class QuotationController : ControllerBase
     /// Get quotation by ID
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<QuotationResponse>> GetQuotationById(
@@ -141,6 +145,7 @@ public class QuotationController : ControllerBase
     /// Update quotation (creates new version)
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<QuotationResponse>> UpdateQuotation(
@@ -177,6 +182,7 @@ public class QuotationController : ControllerBase
     /// Update quotation status
     /// </summary>
     [HttpPatch("{id}/status")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -215,7 +221,7 @@ public class QuotationController : ControllerBase
     /// Approve a quotation (requires Manager role)
     /// </summary>
     [HttpPost("{id}/approve")]
-    [Authorize(Policy = "Manager")]
+    [Authorize(Policy = QuotationPermissions.QuotationsApprove)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -253,6 +259,7 @@ public class QuotationController : ControllerBase
     /// Add an internal note to a quotation
     /// </summary>
     [HttpPost("{id}/notes")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(InternalNoteResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<InternalNoteResponse>> AddNoteToQuotation(
@@ -317,6 +324,7 @@ public class QuotationController : ControllerBase
     /// Get all versions of a quotation
     /// </summary>
     [HttpGet("{id}/versions")]
+    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(List<QuotationVersionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<QuotationVersionResponse>>> GetQuotationVersions(
@@ -339,6 +347,7 @@ public class QuotationController : ControllerBase
     /// Get specific version of a quotation
     /// </summary>
     [HttpGet("{id}/versions/{versionNumber}")]
+    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(QuotationVersionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<QuotationVersionResponse>> GetQuotationVersion(
@@ -362,6 +371,7 @@ public class QuotationController : ControllerBase
     /// Generate PDF for quotation
     /// </summary>
     [HttpPost("{id}/pdf")]
+    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GeneratePdf(
@@ -374,6 +384,28 @@ public class QuotationController : ControllerBase
             var pdfBytes = await _quotationService.GeneratePdfAsync(id, versionNumber, cancellationToken);
 
             return File(pdfBytes, "application/pdf", $"quotation-{id}.pdf");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Delete a quotation
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = QuotationPermissions.QuotationsDelete)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteQuotation(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _quotationService.DeleteAsync(id, cancellationToken);
+            return NoContent();
         }
         catch (KeyNotFoundException ex)
         {

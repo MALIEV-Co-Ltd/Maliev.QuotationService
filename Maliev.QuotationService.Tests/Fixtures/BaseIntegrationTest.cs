@@ -30,8 +30,39 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
     /// <returns>HttpClient with Authorization header set</returns>
     protected HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null)
     {
+        var effectiveRoles = roles ?? new[] { "Employee" };
+        var claims = new Dictionary<string, string>();
+
+        // Map roles to permissions for tests to pass with new permission-based auth
+        // Use a simple mapping for common test roles
+        var permissions = new List<string>();
+        foreach (var role in effectiveRoles)
+        {
+            if (role == "Admin" || role == "quotation-admin") 
+                permissions.AddRange(Maliev.QuotationService.Api.Services.IAM.QuotationPermissions.GetAll());
+            else if (role == "Manager" || role == "quotation-manager")
+                permissions.AddRange(new[] { 
+                    "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update", 
+                    "quotation.quotations.approve", "quotation.quotations.delete" });
+            else if (role == "Employee" || role == "quotation-creator")
+                permissions.AddRange(new[] { 
+                    "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update" });
+            else if (role == "Customer" || role == "quotation-viewer")
+                permissions.Add("quotation.quotations.read");
+        }
+
+        foreach (var perm in permissions.Distinct())
+        {
+            // Note: Multiple claims with same key are supported by the factory
+            claims.Add($"perm_{perm}", perm); 
+        }
+
+        // Adjust factory to handle multiple permissions if needed, 
+        // but current factory takes Dictionary<string, string> which limits to one value per key.
+        // I need to update the factory to support multiple claims of same type.
+        
+        var token = Factory.CreateTestJwtToken(userId, effectiveRoles, claims.Values.Select(v => new System.Security.Claims.Claim("permissions", v)).ToList());
         var client = Factory.CreateClient();
-        var token = Factory.CreateTestJwtToken(userId, roles);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
     }

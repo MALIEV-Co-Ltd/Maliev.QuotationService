@@ -21,6 +21,7 @@ public class QuotationStateManagementTests
     {
         var options = new DbContextOptionsBuilder<QuotationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         _context = new QuotationDbContext(options);

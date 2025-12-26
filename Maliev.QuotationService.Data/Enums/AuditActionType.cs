@@ -7,5 +7,6 @@ public enum AuditActionType
     StatusChange = 3,
     NoteAdded = 4,
     Assignment = 5,
-    Delete = 6
+    Delete = 6,
+    Unauthorized = 7
 }
