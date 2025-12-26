@@ -64,7 +64,7 @@ public class MetricsService : IDisposable
 
     public void RecordRfqStatusTransition(string fromStatus, string toStatus)
     {
-        _rfqStatusTransitions.Add(1, 
+        _rfqStatusTransitions.Add(1,
             new KeyValuePair<string, object?>("from_status", fromStatus),
             new KeyValuePair<string, object?>("to_status", toStatus));
     }
@@ -77,7 +77,7 @@ public class MetricsService : IDisposable
 
     public void RecordQuotationStatusTransition(string fromStatus, string toStatus)
     {
-        _quotationStatusTransitions.Add(1, 
+        _quotationStatusTransitions.Add(1,
             new KeyValuePair<string, object?>("from_status", fromStatus),
             new KeyValuePair<string, object?>("to_status", toStatus));
     }
@@ -86,7 +86,7 @@ public class MetricsService : IDisposable
     {
         _quotationApprovals.Add(1);
     }
-    
+
     public void RecordQuotationVersionCreated()
     {
         _quotationVersionsCreated.Add(1);

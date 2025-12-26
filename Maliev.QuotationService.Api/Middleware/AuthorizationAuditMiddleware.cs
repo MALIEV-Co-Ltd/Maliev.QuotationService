@@ -31,8 +31,8 @@ public class AuthorizationAuditMiddleware
 
     private async Task AuditUnauthorizedAttemptAsync(HttpContext context, QuotationDbContext dbContext)
     {
-        var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                     ?? context.User.FindFirst("sub")?.Value 
+        var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                     ?? context.User.FindFirst("sub")?.Value
                      ?? "anonymous";
 
         var path = context.Request.Path;

@@ -28,7 +28,7 @@ public class AuthorizationTests : BaseIntegrationTest
             { "permissions", QuotationPermissions.QuotationsCreate }
         };
         var token = Factory.CreateTestJwtToken("creator-user", roles: new[] { "quotation-creator" }, additionalClaims: claims);
-        
+
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -48,7 +48,7 @@ public class AuthorizationTests : BaseIntegrationTest
 
         // Token with NO permissions
         var token = Factory.CreateTestJwtToken("unauthorized-user", roles: new[] { "quotation-viewer" });
-        
+
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -61,7 +61,7 @@ public class AuthorizationTests : BaseIntegrationTest
         // Verify Audit Log Entry
         var auditLog = await DbContext.AuditLogEntries
             .FirstOrDefaultAsync(a => a.UserId == "unauthorized-user" && a.ActionType == Data.Enums.AuditActionType.Unauthorized);
-        
+
         Assert.NotNull(auditLog);
         Assert.Equal(Data.Enums.AuditEntityType.Security, auditLog.EntityType);
     }
@@ -71,13 +71,13 @@ public class AuthorizationTests : BaseIntegrationTest
     {
         // Arrange
         var quotation = await CreateTestQuotationAsync();
-        
+
         var claims = new Dictionary<string, string>
         {
             { "permissions", QuotationPermissions.QuotationsApprove }
         };
         var token = Factory.CreateTestJwtToken("manager-user", roles: new[] { "quotation-manager" }, additionalClaims: claims);
-        
+
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -95,14 +95,14 @@ public class AuthorizationTests : BaseIntegrationTest
     {
         // Arrange
         var quotation = await CreateTestQuotationAsync();
-        
+
         // Creator has create but NOT approve
         var claims = new Dictionary<string, string>
         {
             { "permissions", QuotationPermissions.QuotationsCreate }
         };
         var token = Factory.CreateTestJwtToken("creator-user", roles: new[] { "quotation-creator" }, additionalClaims: claims);
-        
+
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -118,13 +118,13 @@ public class AuthorizationTests : BaseIntegrationTest
     {
         // Arrange
         var quotation = await CreateTestQuotationAsync();
-        
+
         var claims = new Dictionary<string, string>
         {
             { "permissions", QuotationPermissions.QuotationsDelete }
         };
         var token = Factory.CreateTestJwtToken("admin-user", roles: new[] { "quotation-admin" }, additionalClaims: claims);
-        
+
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -142,14 +142,14 @@ public class AuthorizationTests : BaseIntegrationTest
     {
         // Arrange
         var quotation = await CreateTestQuotationAsync();
-        
+
         // Manager does NOT have delete permission by default in our spec
         var claims = new Dictionary<string, string>
         {
             { "permissions", QuotationPermissions.QuotationsApprove }
         };
         var token = Factory.CreateTestJwtToken("manager-user", roles: new[] { "quotation-manager" }, additionalClaims: claims);
-        
+
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -169,7 +169,7 @@ public class AuthorizationTests : BaseIntegrationTest
             { "permissions", QuotationPermissions.QuotationsRead }
         };
         var token = Factory.CreateTestJwtToken("viewer-user", roles: new[] { "quotation-viewer" }, additionalClaims: claims);
-        
+
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -189,7 +189,7 @@ public class AuthorizationTests : BaseIntegrationTest
             { "permissions", QuotationPermissions.QuotationsRead }
         };
         var token = Factory.CreateTestJwtToken("viewer-user", roles: new[] { "quotation-viewer" }, additionalClaims: claims);
-        
+
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 

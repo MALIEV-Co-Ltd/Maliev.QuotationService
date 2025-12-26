@@ -108,6 +108,16 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     /// </summary>
     public new async Task DisposeAsync()
     {
+        // Explicitly stop MassTransit bus if it was started
+        if (Services != null)
+        {
+            var busControl = Services.GetService<IBusControl>();
+            if (busControl != null)
+            {
+                await busControl.StopAsync();
+            }
+        }
+
         await _postgresContainer.DisposeAsync();
         await _redisContainer.DisposeAsync();
         await _rabbitmqContainer.DisposeAsync();
@@ -233,7 +243,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     {
         var connectionString = _postgresContainer.GetConnectionString();
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
-        optionsBuilder.UseNpgsql(connectionString, npgsqlOptions => 
+        optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
             npgsqlOptions.MigrationsAssembly(typeof(TDbContext).Assembly.GetName().Name));
         return (TDbContext)Activator.CreateInstance(typeof(TDbContext), optionsBuilder.Options)!;
     }

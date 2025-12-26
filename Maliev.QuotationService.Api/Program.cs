@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Maliev.QuotationService.Api.Configuration.Extensions;
 using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
+using Maliev.Aspire.ServiceDefaults;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,6 +53,7 @@ builder.Services.AddControllers();
 
 // Add authentication
 builder.AddJwtAuthentication();
+builder.Services.AddPermissionAuthorization();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
@@ -126,7 +129,7 @@ await app.RunAsync();
 /// <summary>
 /// Main program class for the application
 /// </summary>
-public partial class Program 
+public partial class Program
 {
     internal static partial class Log
     {
