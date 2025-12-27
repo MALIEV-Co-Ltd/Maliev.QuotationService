@@ -57,5 +57,6 @@ jobs:
         run: dotnet test Maliev.QuotationService.sln --no-build --configuration Release --verbosity normal
         env:
           ConnectionStrings__QuotationDbContext: "Server=localhost;Port=5432;Database=quotation_service_test_db;User Id=postgres;Password=postgres;"
+          Features__PermissionBasedAuthEnabled: "true"
 
 
