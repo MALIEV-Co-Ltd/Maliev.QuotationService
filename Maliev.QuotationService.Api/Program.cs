@@ -86,19 +86,7 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-// Run database migrations on startup (skip in Testing environment)
-if (!app.Environment.IsEnvironment("Testing"))
-{
-    try
-    {
-        await app.MigrateDatabaseAsync<QuotationDbContext>();
-    }
-    catch (Exception ex)
-    {
-        Log.MigrationFailed(logger, ex);
-        // Don't throw - allow app to start for debugging
-    }
-}
+await app.MigrateDatabaseAsync<QuotationDbContext>();
 
 // Configure middleware pipeline
 app.UseStandardMiddleware();
@@ -111,9 +99,6 @@ app.UseAuthentication();
 app.UseMiddleware<Maliev.QuotationService.Api.Middleware.AuthorizationAuditMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
-
-// Redirect root to /quotation (custom legacy behavior kept)
-app.MapGet("/", () => Results.Redirect("/quotation"));
 
 app.MapControllers();
 
