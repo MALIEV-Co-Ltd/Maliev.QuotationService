@@ -381,7 +381,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     public IntegrationTestWebAppFactory()
     {
         _dbContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:18")
+            .WithImage("postgres:18-alpine")
             .WithDatabase("test_db")
             .WithUsername("postgres")
             .WithPassword("postgres")

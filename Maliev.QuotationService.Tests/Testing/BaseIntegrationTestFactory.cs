@@ -52,11 +52,11 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             .Build();
 
         _redisContainer = new RedisBuilder()
-            .WithImage("redis:7-alpine")
+            .WithImage("redis:8.4-alpine")
             .Build();
 
         _rabbitmqContainer = new RabbitMqBuilder()
-            .WithImage("rabbitmq:4.2.1-alpine")
+            .WithImage("rabbitmq:4.2-alpine")
             .Build();
 
         _testRsa = RSA.Create(2048);
@@ -203,12 +203,6 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                         return Task.CompletedTask;
                     }
                 };
-            });
-
-            services.Configure<MassTransitHostOptions>(options =>
-            {
-                options.WaitUntilStarted = true;
-                options.StartTimeout = TimeSpan.FromSeconds(30);
             });
 
             ConfigureAdditionalServices(services);
