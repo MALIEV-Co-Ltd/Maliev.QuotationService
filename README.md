@@ -377,7 +377,7 @@ dotnet test --filter "FullyQualifiedName~QuotationsControllerTests"
 
 ```bash
 # Port forward to PostgreSQL pod (MUST use pod, not service)
-kubectl port-forward -n maliev-dev postgres-cluster-1 5432:5432
+kubectl port-forward -n <namespace> <postgres-pod> 5432:5432
 
 # Set connection string environment variable
 export ConnectionStrings__QuotationDbContext="Host=localhost;Port=5432;Database=quotation_app_db;Username=postgres;Password=<password>;"
@@ -398,37 +398,34 @@ dotnet ef database update PreviousMigrationName --project Maliev.QuotationServic
 
 ### Kubernetes Deployment
 
-Service uses GitHub Actions workflows:
-- `ci-develop.yml` - Deploy to `maliev-dev` namespace
-- `ci-staging.yml` - Deploy to `maliev-staging` namespace
-- `ci-main.yml` - Deploy to `maliev-prod` namespace
+Service uses GitHub Actions workflows for automated deployment to development, staging, and production environments.
 
-Deployments are managed via GitOps (ArgoCD) in the `maliev-gitops` repository.
+Deployments are managed via GitOps (ArgoCD).
 
 ### Port Forwarding
 
 ```bash
 # Forward to service
-kubectl port-forward -n maliev-dev svc/maliev-quotation-service 8080:8080
+kubectl port-forward -n <namespace> svc/<service-name> 8080:8080
 
 # Forward to PostgreSQL (for migrations)
-kubectl port-forward -n maliev-dev postgres-cluster-1 5432:5432
+kubectl port-forward -n <namespace> <postgres-pod> 5432:5432
 
 # Forward to Redis
-kubectl port-forward -n maliev-dev svc/redis 6379:6379
+kubectl port-forward -n <namespace> svc/redis 6379:6379
 ```
 
 ### Logs
 
 ```bash
 # Tail logs
-kubectl logs -f deployment/maliev-quotation-service -n maliev-dev
+kubectl logs -f deployment/<service-name> -n <namespace>
 
 # Get pod status
-kubectl get pods -n maliev-dev | grep quotation-service
+kubectl get pods -n <namespace> | grep <service-name>
 
 # Describe pod
-kubectl describe pod <pod-name> -n maliev-dev
+kubectl describe pod <pod-name> -n <namespace>
 ```
 
 ---
@@ -445,7 +442,7 @@ dotnet user-secrets set "ConnectionStrings:QuotationDbContext" "Host=localhost;P
 ### Issue: Migration fails with "Cannot connect to database"
 **Solution**: Ensure PostgreSQL is accessible. If using Kubernetes, port-forward to the pod (NOT service):
 ```bash
-kubectl port-forward -n maliev-dev postgres-cluster-1 5432:5432
+kubectl port-forward -n <namespace> <postgres-pod> 5432:5432
 ```
 
 ### Issue: Scalar UI returns 404
@@ -509,9 +506,8 @@ kubectl port-forward -n maliev-dev postgres-cluster-1 5432:5432
 ## Support
 
 - **CLAUDE.md**: Service-specific development guidelines
-- **ServiceDefaults Documentation**: `B:\maliev\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\README.md`
-- **MessagingContracts**: `B:\maliev\Maliev.MessagingContracts\README.md`
-- **Test Summary**: `B:\maliev\all-services-test-summary.txt`
+- **ServiceDefaults Documentation**: See Maliev.Aspire.ServiceDefaults repository
+- **MessagingContracts**: See Maliev.MessagingContracts repository
 
 ---
 
