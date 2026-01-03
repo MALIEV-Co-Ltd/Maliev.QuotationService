@@ -1,0 +1,22 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Maliev.Aspire.ServiceDefaults -> b:\maliev\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\bin\Debug\net10.0\Maliev.Aspire.ServiceDefaults.dll
+  Maliev.QuotationService.Data -> b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Data\bin\Debug\net10.0\Maliev.QuotationService.Data.dll
+  Maliev.UploadService.Data -> b:\maliev\Maliev.UploadService\Maliev.UploadService.Data\bin\Debug\net10.0\Maliev.UploadService.Data.dll
+  Maliev.MessagingContracts -> b:\maliev\Maliev.MessagingContracts\generated\csharp\bin\Debug\net10.0\Maliev.MessagingContracts.dll
+  Maliev.UploadService.Api -> b:\maliev\Maliev.UploadService\Maliev.UploadService.Api\bin\Debug\net10.0\Maliev.UploadService.Api.dll
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Consumers\FileDeletedEventConsumer.cs(27,21): error CS1061: 'FileDeletedEvent' does not contain a definition for 'ServiceId' and no accessible extension method 'ServiceId' accepting a first argument of type 'FileDeletedEvent' could be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj]
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Consumers\FileDeletedEventConsumer.cs(34,21): error CS1061: 'FileDeletedEvent' does not contain a definition for 'FileId' and no accessible extension method 'FileId' accepting a first argument of type 'FileDeletedEvent' could be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj]
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Consumers\FileDeletedEventConsumer.cs(34,37): error CS1061: 'FileDeletedEvent' does not contain a definition for 'StoragePath' and no accessible extension method 'StoragePath' accepting a first argument of type 'FileDeletedEvent' could be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj]
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Consumers\FileDeletedEventConsumer.cs(36,35): error CS1061: 'FileDeletedEvent' does not contain a definition for 'FileId' and no accessible extension method 'FileId' accepting a first argument of type 'FileDeletedEvent' could be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj]
+
+Build FAILED.
+
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Consumers\FileDeletedEventConsumer.cs(27,21): error CS1061: 'FileDeletedEvent' does not contain a definition for 'ServiceId' and no accessible extension method 'ServiceId' accepting a first argument of type 'FileDeletedEvent' could be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj]
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Consumers\FileDeletedEventConsumer.cs(34,21): error CS1061: 'FileDeletedEvent' does not contain a definition for 'FileId' and no accessible extension method 'FileId' accepting a first argument of type 'FileDeletedEvent' could be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj]
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Consumers\FileDeletedEventConsumer.cs(34,37): error CS1061: 'FileDeletedEvent' does not contain a definition for 'StoragePath' and no accessible extension method 'StoragePath' accepting a first argument of type 'FileDeletedEvent' could be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj]
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Consumers\FileDeletedEventConsumer.cs(36,35): error CS1061: 'FileDeletedEvent' does not contain a definition for 'FileId' and no accessible extension method 'FileId' accepting a first argument of type 'FileDeletedEvent' could be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\Maliev.QuotationService.Api.csproj]
+    0 Warning(s)
+    4 Error(s)
+
+Time Elapsed 00:00:02.44

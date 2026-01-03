@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace Maliev.QuotationService.Tests.Fixtures;
 
-public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, QuotationDbContext>
+public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Maliev.QuotationService.Api.Program, QuotationDbContext>
 {
     protected override void ConfigureEnvironmentVariables()
     {

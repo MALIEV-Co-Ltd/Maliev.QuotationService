@@ -205,6 +205,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 };
             });
 
+            // Add MassTransit test harness for testing message publishing/consuming
+            services.AddMassTransitTestHarness();
+
             ConfigureAdditionalServices(services);
         });
     }

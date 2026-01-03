@@ -1,0 +1,19 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Maliev.Aspire.ServiceDefaults -> b:\maliev\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\bin\Debug\net10.0\Maliev.Aspire.ServiceDefaults.dll
+  Maliev.QuotationService.Data -> b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Data\bin\Debug\net10.0\Maliev.QuotationService.Data.dll
+  Maliev.MessagingContracts -> b:\maliev\Maliev.MessagingContracts\generated\csharp\bin\Debug\net10.0\Maliev.MessagingContracts.dll
+  Maliev.UploadService.Data -> b:\maliev\Maliev.UploadService\Maliev.UploadService.Data\bin\Debug\net10.0\Maliev.UploadService.Data.dll
+  Maliev.UploadService.Api -> b:\maliev\Maliev.UploadService\Maliev.UploadService.Api\bin\Debug\net10.0\Maliev.UploadService.Api.dll
+  Maliev.QuotationService.Api -> b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\bin\Debug\net10.0\Maliev.QuotationService.Api.dll
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Unit\Services\QuotationServiceTests.cs(19,27): error CS0246: The type or namespace name 'IPublishEndpoint' could not be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Maliev.QuotationService.Tests.csproj]
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Unit\Services\QuotationStateManagementTests.cs(19,27): error CS0246: The type or namespace name 'IPublishEndpoint' could not be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Maliev.QuotationService.Tests.csproj]
+
+Build FAILED.
+
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Unit\Services\QuotationServiceTests.cs(19,27): error CS0246: The type or namespace name 'IPublishEndpoint' could not be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Maliev.QuotationService.Tests.csproj]
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Unit\Services\QuotationStateManagementTests.cs(19,27): error CS0246: The type or namespace name 'IPublishEndpoint' could not be found (are you missing a using directive or an assembly reference?) [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Maliev.QuotationService.Tests.csproj]
+    0 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:01.93

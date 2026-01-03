@@ -7,6 +7,7 @@ using Maliev.QuotationService.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using MassTransit;
 
 namespace Maliev.QuotationService.Tests.Unit.Services;
 
@@ -16,6 +17,7 @@ public class QuotationStateManagementTests
     private readonly QuotationDbContext _context;
     private readonly Maliev.QuotationService.Api.Services.QuotationService _quotationService;
     private readonly MetricsService _metricsService;
+    private readonly Mock<IPublishEndpoint> _mockPublishEndpoint;
 
     public QuotationStateManagementTests()
     {
@@ -27,7 +29,8 @@ public class QuotationStateManagementTests
         _context = new QuotationDbContext(options);
         _mockLogger = new Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>>();
         _metricsService = new MetricsService();
-        _quotationService = new Maliev.QuotationService.Api.Services.QuotationService(_context, _mockLogger.Object, _metricsService);
+        _mockPublishEndpoint = new Mock<IPublishEndpoint>();
+        _quotationService = new Maliev.QuotationService.Api.Services.QuotationService(_context, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
     }
 
     [Fact]

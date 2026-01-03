@@ -1,0 +1,17 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Maliev.Aspire.ServiceDefaults -> b:\maliev\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\bin\Debug\net10.0\Maliev.Aspire.ServiceDefaults.dll
+  Maliev.QuotationService.Data -> b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Data\bin\Debug\net10.0\Maliev.QuotationService.Data.dll
+  Maliev.MessagingContracts -> b:\maliev\Maliev.MessagingContracts\generated\csharp\bin\Debug\net10.0\Maliev.MessagingContracts.dll
+  Maliev.UploadService.Data -> b:\maliev\Maliev.UploadService\Maliev.UploadService.Data\bin\Debug\net10.0\Maliev.UploadService.Data.dll
+  Maliev.UploadService.Api -> b:\maliev\Maliev.UploadService\Maliev.UploadService.Api\bin\Debug\net10.0\Maliev.UploadService.Api.dll
+  Maliev.QuotationService.Api -> b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Api\bin\Debug\net10.0\Maliev.QuotationService.Api.dll
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Fixtures\IntegrationTestWebAppFactory.cs(10,72): error CS0433: The type 'Program' exists in both 'Maliev.QuotationService.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null' and 'Maliev.UploadService.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null' [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Maliev.QuotationService.Tests.csproj]
+
+Build FAILED.
+
+b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Fixtures\IntegrationTestWebAppFactory.cs(10,72): error CS0433: The type 'Program' exists in both 'Maliev.QuotationService.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null' and 'Maliev.UploadService.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null' [b:\maliev\Maliev.QuotationService\Maliev.QuotationService.Tests\Maliev.QuotationService.Tests.csproj]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:02.06
