@@ -4,6 +4,8 @@ using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
+using Maliev.MessagingContracts.Generated;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.QuotationService.Api.Services;
@@ -13,15 +15,18 @@ public class QuotationService : IQuotationService
     private readonly QuotationDbContext _context;
     private readonly ILogger<QuotationService> _logger;
     private readonly MetricsService _metricsService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public QuotationService(
         QuotationDbContext context,
         ILogger<QuotationService> logger,
-        MetricsService metricsService)
+        MetricsService metricsService,
+        IPublishEndpoint publishEndpoint)
     {
         _context = context;
         _logger = logger;
         _metricsService = metricsService;
+        _publishEndpoint = publishEndpoint;
     }
 
     // NOTE: Automatic expiration of quotations (CustomerReview → Expired when ValidityPeriodEnd < NOW)
@@ -141,6 +146,32 @@ public class QuotationService : IQuotationService
                 _metricsService.RecordQuotationCreated();
 
                 _logger.LogInformation("Created quotation {QuotationId} for customer {CustomerId}", quotation.Id, customerId);
+
+                // Publish QuotationCreatedEvent
+                await _publishEndpoint.Publish(new QuotationCreatedEvent(
+                    MessageId: Guid.NewGuid(),
+                    MessageName: "QuotationCreatedEvent",
+                    MessageType: MessageType.Event,
+                    MessageVersion: "1.0.0",
+                    PublishedBy: "QuotationService",
+                    ConsumedBy: ["NotificationService", "AnalyticsService"],
+                    CorrelationId: Guid.NewGuid(),
+                    CausationId: null,
+                    OccurredAtUtc: DateTimeOffset.UtcNow,
+                    IsPublic: false,
+                    Payload: new QuotationCreatedEventPayload(
+                        QuotationId: quotation.Id,
+                        QuotationNumber: quotation.Id.ToString(),
+                        CustomerId: quotation.CustomerId,
+                        TotalAmount: (double)version.TotalPrice,
+                        Currency: version.CurrencyCode,
+                        ValidUntil: new DateTimeOffset(quotation.ValidityPeriodEnd.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero),
+                        CreatedBy: currentUserId,
+                        CreatedAt: new DateTimeOffset(quotation.CreatedAt, TimeSpan.Zero)
+                    )
+                ), cancellationToken);
+
+                _logger.LogInformation("Published QuotationCreatedEvent for quotation {QuotationId}", quotation.Id);
 
                 return quotation;
             }
@@ -320,6 +351,91 @@ public class QuotationService : IQuotationService
 
         _logger.LogInformation("Updated quotation {QuotationId} status from {OldStatus} to {NewStatus}",
             quotationId, oldStatus, status);
+
+        // Publish status-specific events
+        if (status == QuotationStatus.Accepted)
+        {
+            // Reload quotation with navigation properties to get current version data
+            var quotationWithVersion = await _context.Quotations
+                .Include(q => q.CurrentVersion)
+                .FirstOrDefaultAsync(q => q.Id == quotationId, cancellationToken);
+
+            if (quotationWithVersion?.CurrentVersion != null)
+            {
+                await _publishEndpoint.Publish(new QuotationAcceptedEvent(
+                    MessageId: Guid.NewGuid(),
+                    MessageName: "QuotationAcceptedEvent",
+                    MessageType: MessageType.Event,
+                    MessageVersion: "1.0.0",
+                    PublishedBy: "QuotationService",
+                    ConsumedBy: ["OrderService", "NotificationService", "AnalyticsService"],
+                    CorrelationId: Guid.NewGuid(),
+                    CausationId: null,
+                    OccurredAtUtc: DateTimeOffset.UtcNow,
+                    IsPublic: false,
+                    Payload: new QuotationAcceptedEventPayload(
+                        QuotationId: quotation.Id,
+                        QuotationNumber: quotation.Id.ToString(),
+                        CustomerId: quotation.CustomerId,
+                        AcceptedAmount: (double)quotationWithVersion.CurrentVersion.TotalPrice,
+                        Currency: quotationWithVersion.CurrentVersion.CurrencyCode,
+                        AcceptedAt: DateTimeOffset.UtcNow,
+                        AcceptedBy: currentUserId
+                    )
+                ), cancellationToken);
+
+                _logger.LogInformation("Published QuotationAcceptedEvent for quotation {QuotationId}", quotationId);
+            }
+        }
+        else if (status == QuotationStatus.Cancelled)
+        {
+            await _publishEndpoint.Publish(new QuotationCancelledEvent(
+                MessageId: Guid.NewGuid(),
+                MessageName: "QuotationCancelledEvent",
+                MessageType: MessageType.Event,
+                MessageVersion: "1.0.0",
+                PublishedBy: "QuotationService",
+                ConsumedBy: ["NotificationService", "AnalyticsService"],
+                CorrelationId: Guid.NewGuid(),
+                CausationId: null,
+                OccurredAtUtc: DateTimeOffset.UtcNow,
+                IsPublic: false,
+                Payload: new QuotationCancelledEventPayload(
+                    QuotationId: quotation.Id,
+                    QuotationNumber: quotation.Id.ToString(),
+                    CustomerId: quotation.CustomerId,
+                    CancelledAt: DateTimeOffset.UtcNow,
+                    CancelledBy: currentUserId,
+                    CancellationReason: null
+                )
+            ), cancellationToken);
+
+            _logger.LogInformation("Published QuotationCancelledEvent for quotation {QuotationId}", quotationId);
+        }
+        else if (status == QuotationStatus.Expired)
+        {
+            await _publishEndpoint.Publish(new QuotationExpiredEvent(
+                MessageId: Guid.NewGuid(),
+                MessageName: "QuotationExpiredEvent",
+                MessageType: MessageType.Event,
+                MessageVersion: "1.0.0",
+                PublishedBy: "QuotationService",
+                ConsumedBy: ["NotificationService", "AnalyticsService"],
+                CorrelationId: Guid.NewGuid(),
+                CausationId: null,
+                OccurredAtUtc: DateTimeOffset.UtcNow,
+                IsPublic: false,
+                Payload: new QuotationExpiredEventPayload(
+                    QuotationId: quotation.Id,
+                    QuotationNumber: quotation.Id.ToString(),
+                    CustomerId: quotation.CustomerId,
+                    ValidUntil: new DateTimeOffset(quotation.ValidityPeriodEnd.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero),
+                    ExpiredAt: DateTimeOffset.UtcNow
+                )
+            ), cancellationToken);
+
+            _logger.LogInformation("Published QuotationExpiredEvent for quotation {QuotationId}", quotationId);
+        }
 
         return quotation;
     }

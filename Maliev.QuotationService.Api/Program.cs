@@ -27,7 +27,11 @@ builder.AddPostgresDbContext<QuotationDbContext>("QuotationDbContext");
 builder.AddRedisDistributedCache("quotation:");
 
 // Add message bus (RabbitMQ or in-memory fallback)
-builder.AddMassTransitWithRabbitMq();
+builder.AddMassTransitWithRabbitMq(x =>
+{
+    x.AddConsumer<Maliev.QuotationService.Api.Consumers.FileDeletedEventConsumer>();
+    x.AddConsumer<Maliev.QuotationService.Api.Consumers.FileAnalyzedEventConsumer>();
+});
 
 // --- API Configuration ---
 builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
@@ -84,7 +88,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
+var logger = app.Services.GetRequiredService<ILogger<Maliev.QuotationService.Api.Program>>();
 
 await app.MigrateDatabaseAsync<QuotationDbContext>();
 
@@ -107,21 +111,24 @@ app.MapDefaultEndpoints(servicePrefix: "quotation");
 // Map OpenAPI and Scalar documentation (dev/staging only)
 app.MapApiDocumentation(servicePrefix: "quotation");
 
-Log.ServiceStarted(logger);
+Maliev.QuotationService.Api.Program.Log.ServiceStarted(logger);
 
 await app.RunAsync();
 
 /// <summary>
 /// Main program class for the application
 /// </summary>
-public partial class Program
+namespace Maliev.QuotationService.Api
 {
-    internal static partial class Log
+    public partial class Program
     {
-        [LoggerMessage(Level = LogLevel.Information, Message = "QuotationService started successfully")]
-        public static partial void ServiceStarted(ILogger logger);
+        internal static partial class Log
+        {
+            [LoggerMessage(Level = LogLevel.Information, Message = "QuotationService started successfully")]
+            public static partial void ServiceStarted(ILogger logger);
 
-        [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
-        public static partial void MigrationFailed(ILogger logger, Exception exception);
+            [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
+            public static partial void MigrationFailed(ILogger logger, Exception exception);
+        }
     }
 }

@@ -11,6 +11,13 @@ public class FileReference
     public DateTime UploadedAt { get; set; }
     public string UploadedByUserId { get; set; } = string.Empty;
 
+    // Analysis results from GeometryService
+    public double? VolumeCm3 { get; set; }
+    public double? SupportVolumeCm3 { get; set; }
+    public double? SurfaceAreaCm2 { get; set; }
+    public bool? IsManifold { get; set; }
+    public int? TriangleCount { get; set; }
+
     // Navigation properties
     public Rfq? Rfq { get; set; }
     public Quotation? Quotation { get; set; }

@@ -8,6 +8,7 @@ using Maliev.QuotationService.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using MassTransit;
 
 namespace Maliev.QuotationService.Tests.Unit.Services;
 
@@ -16,6 +17,7 @@ public class QuotationServiceTests : IDisposable
     private readonly DbContextOptions<QuotationDbContext> _dbContextOptions;
     private readonly Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>> _mockLogger;
     private readonly MetricsService _metricsService;
+    private readonly Mock<IPublishEndpoint> _mockPublishEndpoint;
 
     public QuotationServiceTests()
     {
@@ -26,6 +28,7 @@ public class QuotationServiceTests : IDisposable
 
         _mockLogger = new Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>>();
         _metricsService = new MetricsService();
+        _mockPublishEndpoint = new Mock<IPublishEndpoint>();
     }
 
     public void Dispose()
@@ -38,7 +41,7 @@ public class QuotationServiceTests : IDisposable
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
 
         var customer = new Customer
         {
@@ -87,7 +90,7 @@ public class QuotationServiceTests : IDisposable
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
 
         var customer = new Customer
         {
@@ -143,7 +146,7 @@ public class QuotationServiceTests : IDisposable
     {
         // Arrange
         await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
 
         var customer = new Customer
         {
