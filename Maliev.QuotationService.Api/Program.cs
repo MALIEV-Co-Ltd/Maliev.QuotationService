@@ -27,7 +27,11 @@ builder.AddPostgresDbContext<QuotationDbContext>("QuotationDbContext");
 builder.AddRedisDistributedCache("quotation:");
 
 // Add message bus (RabbitMQ or in-memory fallback)
-builder.AddMassTransitWithRabbitMq();
+builder.AddMassTransitWithRabbitMq(x =>
+{
+    x.AddConsumer<Maliev.QuotationService.Api.Consumers.FileDeletedEventConsumer>();
+    x.AddConsumer<Maliev.QuotationService.Api.Consumers.FileAnalyzedEventConsumer>();
+});
 
 // --- API Configuration ---
 builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
