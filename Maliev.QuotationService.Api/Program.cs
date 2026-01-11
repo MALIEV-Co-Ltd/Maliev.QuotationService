@@ -46,18 +46,11 @@ if (!builder.Environment.IsProduction())
 }
 
 // Add external service clients with resilience
+builder.AddIAMServiceClient("quotation");
 builder.Services.AddExternalServiceClients(builder.Configuration);
-
-// Add application services
-builder.Services.AddApplicationServices();
-builder.Services.AddSingleton<MetricsService>();
-
-// Add controllers
-builder.Services.AddControllers();
 
 // Add authentication
 builder.AddJwtAuthentication();
-builder.Services.AddPermissionAuthorization();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
@@ -67,6 +60,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("EmployeeOrHigher", policy =>
         policy.RequireRole("Employee", "Manager", "Admin"));
 });
+
+// Add application services
+builder.Services.AddApplicationServices();
+builder.Services.AddSingleton<MetricsService>();
 
 // Add rate limiting
 builder.Services.AddRateLimiter(options =>
@@ -95,7 +92,10 @@ await app.MigrateDatabaseAsync<QuotationDbContext>();
 // Configure middleware pipeline
 app.UseStandardMiddleware();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseRouting();
 app.UseCors();
 

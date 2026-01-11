@@ -12,11 +12,13 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IQuotationService, Maliev.QuotationService.Api.Services.QuotationService>();
         services.AddScoped<IRfqService, Maliev.QuotationService.Api.Services.RfqService>();
+        services.AddScoped<ICustomerMatchingService, Maliev.QuotationService.Api.Services.CustomerMatchingService>();
+        services.AddScoped<IAnalyticsService, Maliev.QuotationService.Api.Services.AnalyticsService>();
 
         // IAM & Authorization
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
-        services.AddIAMRegistration<QuotationIAMRegistrationService>();
+        services.AddIAMRegistration<QuotationIAMRegistrationService>("quotation");
 
         return services;
     }
@@ -24,9 +26,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddExternalServiceClients(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddServiceClient<IMaterialServiceClient, MaterialServiceClient>(configuration, "MaterialService");
-
-        // Register IAM HttpClient for use via IHttpClientFactory
-        services.AddServiceClient(configuration, "IAMService");
+        services.AddServiceClient<ICurrencyServiceClient, CurrencyServiceClient>(configuration, "CurrencyService");
+        services.AddServiceClient<IUploadServiceClient, UploadServiceClient>(configuration, "UploadService");
+        services.AddServiceClient<IPdfServiceClient, PdfServiceClient>(configuration, "PdfService");
 
         return services;
     }
