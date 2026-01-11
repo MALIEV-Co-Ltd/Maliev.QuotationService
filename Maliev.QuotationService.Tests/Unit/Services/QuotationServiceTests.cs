@@ -9,39 +9,29 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using MassTransit;
+using Maliev.QuotationService.Tests.Fixtures;
+using Maliev.QuotationService.Api.DTOs.Requests;
 
 namespace Maliev.QuotationService.Tests.Unit.Services;
 
-public class QuotationServiceTests : IDisposable
+public class QuotationServiceTests : BaseIntegrationTest
 {
-    private readonly DbContextOptions<QuotationDbContext> _dbContextOptions;
     private readonly Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>> _mockLogger;
     private readonly MetricsService _metricsService;
     private readonly Mock<IPublishEndpoint> _mockPublishEndpoint;
 
-    public QuotationServiceTests()
+    public QuotationServiceTests(IntegrationTestWebAppFactory factory) : base(factory)
     {
-        _dbContextOptions = new DbContextOptionsBuilder<QuotationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
-
         _mockLogger = new Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>>();
         _metricsService = new MetricsService();
         _mockPublishEndpoint = new Mock<IPublishEndpoint>();
-    }
-
-    public void Dispose()
-    {
-        _metricsService.Dispose();
     }
 
     [Fact]
     public async Task CreateAsync_ValidRequest_CreatesQuotation()
     {
         // Arrange
-        await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(DbContext, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
 
         var customer = new Customer
         {
@@ -51,12 +41,12 @@ public class QuotationServiceTests : IDisposable
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-        await context.Customers.AddAsync(customer);
-        await context.SaveChangesAsync();
+        await DbContext.Customers.AddAsync(customer);
+        await DbContext.SaveChangesAsync();
 
-        var lineItems = new List<object>
+        var lineItems = new List<QuotationLineItemDto>
         {
-            new { MaterialServiceId = Guid.NewGuid(), Quantity = 10, UnitPrice = 100.0m, ManufacturingProcess = "CNC" }
+            new QuotationLineItemDto { MaterialServiceId = Guid.NewGuid(), Quantity = 10, UnitPrice = 100.0m, ManufacturingProcess = "CNC", UnitOfMeasure = "pcs" }
         };
 
         // Act
@@ -76,7 +66,7 @@ public class QuotationServiceTests : IDisposable
         Assert.Equal(QuotationStatus.Draft, quotation.Status);
         Assert.NotEqual(Guid.Empty, quotation.CurrentVersionId);
 
-        var savedQuotation = await context.Quotations
+        var savedQuotation = await DbContext.Quotations
             .Include(q => q.Versions)
             .FirstOrDefaultAsync(q => q.Id == quotation.Id);
 
@@ -89,8 +79,7 @@ public class QuotationServiceTests : IDisposable
     public async Task CreateAsync_FromRfq_LinksToRfq()
     {
         // Arrange
-        await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(DbContext, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
 
         var customer = new Customer
         {
@@ -111,13 +100,13 @@ public class QuotationServiceTests : IDisposable
             UpdatedAt = DateTime.UtcNow
         };
 
-        await context.Customers.AddAsync(customer);
-        await context.Rfqs.AddAsync(rfq);
-        await context.SaveChangesAsync();
+        await DbContext.Customers.AddAsync(customer);
+        await DbContext.Rfqs.AddAsync(rfq);
+        await DbContext.SaveChangesAsync();
 
-        var lineItems = new List<object>
+        var lineItems = new List<QuotationLineItemDto>
         {
-            new { MaterialServiceId = Guid.NewGuid(), Quantity = 5, UnitPrice = 200.0m, ManufacturingProcess = "Laser Cutting" }
+            new QuotationLineItemDto { MaterialServiceId = Guid.NewGuid(), Quantity = 5, UnitPrice = 200.0m, ManufacturingProcess = "Laser Cutting", UnitOfMeasure = "pcs" }
         };
 
         // Act
@@ -137,7 +126,7 @@ public class QuotationServiceTests : IDisposable
         Assert.Equal(customer.Id, quotation.CustomerId);
 
         // Verify RFQ status was updated
-        var updatedRfq = await context.Rfqs.FindAsync(rfq.Id);
+        var updatedRfq = await DbContext.Rfqs.FindAsync(rfq.Id);
         Assert.Equal(quotation.Id, updatedRfq!.ConvertedToQuotationId);
     }
 
@@ -145,8 +134,7 @@ public class QuotationServiceTests : IDisposable
     public async Task UpdateAsync_CreatesNewVersion()
     {
         // Arrange
-        await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(context, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(DbContext, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
 
         var customer = new Customer
         {
@@ -168,6 +156,10 @@ public class QuotationServiceTests : IDisposable
             UpdatedAt = DateTime.UtcNow
         };
 
+        await DbContext.Customers.AddAsync(customer);
+        await DbContext.Quotations.AddAsync(quotation);
+        await DbContext.SaveChangesAsync();
+
         var version1 = new QuotationVersion
         {
             Id = Guid.NewGuid(),
@@ -179,16 +171,13 @@ public class QuotationServiceTests : IDisposable
             CreatedAt = DateTime.UtcNow
         };
 
+        await DbContext.QuotationVersions.AddAsync(version1);
         quotation.CurrentVersionId = version1.Id;
+        await DbContext.SaveChangesAsync();
 
-        await context.Customers.AddAsync(customer);
-        await context.Quotations.AddAsync(quotation);
-        await context.QuotationVersions.AddAsync(version1);
-        await context.SaveChangesAsync();
-
-        var newLineItems = new List<object>
+        var newLineItems = new List<QuotationLineItemDto>
         {
-            new { MaterialServiceId = Guid.NewGuid(), Quantity = 20, UnitPrice = 150.0m, ManufacturingProcess = "3D Printing" }
+            new QuotationLineItemDto { MaterialServiceId = Guid.NewGuid(), Quantity = 20, UnitPrice = 150.0m, ManufacturingProcess = "3D Printing", UnitOfMeasure = "pcs" }
         };
 
         // Act
@@ -203,7 +192,7 @@ public class QuotationServiceTests : IDisposable
         Assert.NotNull(updatedQuotation);
         Assert.NotEqual(version1.Id, updatedQuotation.CurrentVersionId);
 
-        var savedQuotation = await context.Quotations
+        var savedQuotation = await DbContext.Quotations
             .Include(q => q.Versions)
             .FirstOrDefaultAsync(q => q.Id == quotation.Id);
 

@@ -8,52 +8,32 @@ using Maliev.QuotationService.Api.Services.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Maliev.QuotationService.Tests.Fixtures;
 
 namespace Maliev.QuotationService.Tests.Unit.Services;
 
-public class RfqServiceTests : IDisposable
+public class RfqServiceTests : BaseIntegrationTest
 {
-    private readonly DbContextOptions<QuotationDbContext> _dbContextOptions;
     private readonly Mock<ILogger<RfqService>> _mockLogger;
     private readonly MetricsService _metricsService;
 
-    public RfqServiceTests()
+    public RfqServiceTests(IntegrationTestWebAppFactory factory) : base(factory)
     {
-        _dbContextOptions = new DbContextOptionsBuilder<QuotationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
         _mockLogger = new Mock<ILogger<RfqService>>();
         _metricsService = new MetricsService();
-    }
-
-    public void Dispose()
-    {
-        _metricsService.Dispose();
     }
 
     [Fact]
     public async Task CreateAsync_ValidRequest_CreatesRfq()
     {
         // Arrange
-        await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new RfqService(context, _mockLogger.Object, _metricsService);
-
-        var customer = new Customer
-        {
-            Id = Guid.NewGuid(),
-            Email = "test@example.com",
-            Name = "Test Customer",
-            PhoneNumber = "+66123456789",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-        await context.Customers.AddAsync(customer);
-        await context.SaveChangesAsync();
+        var service = new RfqService(DbContext, _mockLogger.Object, _metricsService);
 
         // Act
         var rfq = await service.CreateAsync(
-            customerId: customer.Id,
+            customerEmail: "test@example.com",
+            customerName: "Test Customer",
+            customerPhoneNumber: "+66123456789",
             channelSource: RfqChannel.Website,
             requestDetails: new { description = "Test request" },
             uploadServiceFileIds: null,
@@ -62,21 +42,20 @@ public class RfqServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(rfq);
-        Assert.Equal(customer.Id, rfq.CustomerId);
         Assert.Equal(RfqChannel.Website, rfq.ChannelSource);
         Assert.Equal(RfqStatus.New, rfq.Status);
         Assert.True(DateTime.UtcNow.Subtract(rfq.CreatedAt).TotalSeconds < 5);
 
-        var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
+        var savedRfq = await DbContext.Rfqs.Include(r => r.Customer).FirstOrDefaultAsync(r => r.Id == rfq.Id);
         Assert.NotNull(savedRfq);
+        Assert.Equal("test@example.com", savedRfq.Customer.Email);
     }
 
     [Fact]
     public async Task UpdateAsync_ValidRfq_UpdatesDetails()
     {
         // Arrange
-        await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new RfqService(context, _mockLogger.Object, _metricsService);
+        var service = new RfqService(DbContext, _mockLogger.Object, _metricsService);
 
         var customer = new Customer
         {
@@ -96,9 +75,9 @@ public class RfqServiceTests : IDisposable
             UpdatedAt = DateTime.UtcNow
         };
 
-        await context.Customers.AddAsync(customer);
-        await context.Rfqs.AddAsync(rfq);
-        await context.SaveChangesAsync();
+        DbContext.Customers.Add(customer);
+        DbContext.Rfqs.Add(rfq);
+        await DbContext.SaveChangesAsync();
 
         // Capture original UpdatedAt before update
         var originalUpdatedAt = rfq.UpdatedAt;
@@ -121,7 +100,7 @@ public class RfqServiceTests : IDisposable
         Assert.Equal("staff-123", updated.AssignedStaffUserId);
         Assert.True(updated.UpdatedAt > originalUpdatedAt);
 
-        var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
+        var savedRfq = await DbContext.Rfqs.FindAsync(rfq.Id);
         Assert.Equal("staff-123", savedRfq!.AssignedStaffUserId);
     }
 
@@ -129,8 +108,7 @@ public class RfqServiceTests : IDisposable
     public async Task AssignAsync_ValidStaffUser_AssignsRfq()
     {
         // Arrange
-        await using var context = new QuotationDbContext(_dbContextOptions);
-        var service = new RfqService(context, _mockLogger.Object, _metricsService);
+        var service = new RfqService(DbContext, _mockLogger.Object, _metricsService);
 
         var customer = new Customer
         {
@@ -150,9 +128,9 @@ public class RfqServiceTests : IDisposable
             UpdatedAt = DateTime.UtcNow
         };
 
-        await context.Customers.AddAsync(customer);
-        await context.Rfqs.AddAsync(rfq);
-        await context.SaveChangesAsync();
+        DbContext.Customers.Add(customer);
+        DbContext.Rfqs.Add(rfq);
+        await DbContext.SaveChangesAsync();
 
         var staffUserId = "staff-456";
 
@@ -167,11 +145,11 @@ public class RfqServiceTests : IDisposable
         Assert.NotNull(assigned);
         Assert.Equal(staffUserId, assigned.AssignedStaffUserId);
 
-        var savedRfq = await context.Rfqs.FindAsync(rfq.Id);
+        var savedRfq = await DbContext.Rfqs.FindAsync(rfq.Id);
         Assert.Equal(staffUserId, savedRfq!.AssignedStaffUserId);
 
         // Verify audit log entry was created
-        var auditEntry = await context.AuditLogEntries
+        var auditEntry = await DbContext.AuditLogEntries
             .Where(a => a.EntityType == AuditEntityType.RFQ && a.EntityId == rfq.Id)
             .OrderByDescending(a => a.Timestamp)
             .FirstOrDefaultAsync();

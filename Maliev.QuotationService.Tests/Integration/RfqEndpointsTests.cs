@@ -115,26 +115,26 @@ public class RfqEndpointsTests : BaseIntegrationTest
         // Act - Filter by channel
         var response1 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?channel=Website");
         Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
-        var result1 = await response1.Content.ReadFromJsonAsync<List<RfqResponse>>();
+        var result1 = await response1.Content.ReadFromJsonAsync<PagedResponse<RfqResponse>>();
         Assert.NotNull(result1);
-        Assert.Single(result1);
-        Assert.Equal(RfqChannel.Website, result1[0].ChannelSource);
+        Assert.Single(result1.Data);
+        Assert.Equal(RfqChannel.Website, result1.Data.First().ChannelSource);
 
         // Act - Filter by status
         var response2 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?status=InProgress");
         Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
-        var result2 = await response2.Content.ReadFromJsonAsync<List<RfqResponse>>();
+        var result2 = await response2.Content.ReadFromJsonAsync<PagedResponse<RfqResponse>>();
         Assert.NotNull(result2);
-        Assert.Single(result2);
-        Assert.Equal(RfqStatus.InProgress, result2[0].Status);
+        Assert.Single(result2.Data);
+        Assert.Equal(RfqStatus.InProgress, result2.Data.First().Status);
 
         // Act - Filter by assigned staff
         var response3 = await authenticatedClient.GetAsync("/quotation/v1/rfqs?assignedStaffUserId=staff-123");
         Assert.Equal(HttpStatusCode.OK, response3.StatusCode);
-        var result3 = await response3.Content.ReadFromJsonAsync<List<RfqResponse>>();
+        var result3 = await response3.Content.ReadFromJsonAsync<PagedResponse<RfqResponse>>();
         Assert.NotNull(result3);
-        Assert.Single(result3);
-        Assert.Equal("staff-123", result3[0].AssignedStaffUserId);
+        Assert.Single(result3.Data);
+        Assert.Equal("staff-123", result3.Data.First().AssignedStaffUserId);
     }
 
     [Fact]

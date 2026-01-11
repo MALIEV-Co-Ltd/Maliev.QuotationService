@@ -39,7 +39,7 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         foreach (var role in effectiveRoles)
         {
             if (role == "Admin" || role == "quotation-admin")
-                permissions.AddRange(Maliev.QuotationService.Api.Services.IAM.QuotationPermissions.GetAll());
+                permissions.AddRange(Maliev.QuotationService.Api.Services.IAM.QuotationPermissions.All);
             else if (role == "Manager" || role == "quotation-manager")
                 permissions.AddRange(new[] {
                     "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update",
@@ -57,7 +57,7 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
             claims.Add($"perm_{perm}", perm);
         }
 
-        // Adjust factory to handle multiple permissions if needed, 
+        // Adjust factory to handle multiple permissions if needed,
         // but current factory takes Dictionary<string, string> which limits to one value per key.
         // I need to update the factory to support multiple claims of same type.
 

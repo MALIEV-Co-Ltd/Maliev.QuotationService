@@ -172,4 +172,32 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         Assert.Equal(3, firstVersion.VersionNumber);
         Assert.Equal("Final revision", firstVersion.ChangeSummary);
     }
+
+    [Fact]
+    public async Task GetQuotations_WithFilters_ReturnsPagedResults()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = "paged@example.com",
+            Name = "Paged Customer",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        DbContext.Customers.Add(customer);
+        await DbContext.SaveChangesAsync();
+
+        using var authenticatedClient = CreateAuthenticatedClient();
+
+        // Act
+        var response = await authenticatedClient.GetAsync("/quotation/v1/quotations");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<PagedResponse<QuotationResponse>>();
+        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
+        Assert.NotNull(result.Meta);
+    }
 }
