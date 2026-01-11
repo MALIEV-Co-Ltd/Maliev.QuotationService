@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -115,7 +115,12 @@ namespace Maliev.QuotationService.Data.Migrations
                     file_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     file_type = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     uploaded_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
-                    uploaded_by_user_id = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false)
+                    uploaded_by_user_id = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    volume_cm3 = table.Column<double>(type: "double precision", nullable: true),
+                    support_volume_cm3 = table.Column<double>(type: "double precision", nullable: true),
+                    surface_area_cm2 = table.Column<double>(type: "double precision", nullable: true),
+                    is_manifold = table.Column<bool>(type: "boolean", nullable: true),
+                    triangle_count = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {

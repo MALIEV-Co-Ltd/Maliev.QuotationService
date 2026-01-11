@@ -19,14 +19,8 @@ public class QuotationLineItemConfiguration : IEntityTypeConfiguration<Quotation
         builder.Property(l => l.MaterialServiceId).IsRequired();
         builder.Property(l => l.MaterialName).HasMaxLength(200).IsRequired();
 
-        // Configure JsonDocument property with converter for InMemory database
-        var converter = new ValueConverter<JsonDocument?, string?>(
-            v => v == null ? null : v.RootElement.GetRawText(),
-            v => v == null ? null : JsonDocument.Parse(v));
-
         builder.Property(l => l.MaterialProperties)
-            .HasColumnType("jsonb")
-            .HasConversion(converter);
+            .HasColumnType("jsonb");
 
         builder.Property(l => l.ManufacturingProcess).HasMaxLength(100);
 
@@ -38,6 +32,8 @@ public class QuotationLineItemConfiguration : IEntityTypeConfiguration<Quotation
 
         builder.Property(l => l.Notes).HasMaxLength(500);
 
-        // Version relationship configured in QuotationVersionConfiguration
+
+        // Matching query filter to avoid warnings with required relationship
+        builder.HasQueryFilter(l => !l.Version.Quotation.IsDeleted);
     }
 }

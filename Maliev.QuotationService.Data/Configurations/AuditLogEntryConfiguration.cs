@@ -28,14 +28,8 @@ public class AuditLogEntryConfiguration : IEntityTypeConfiguration<AuditLogEntry
         builder.Property(a => a.Timestamp).HasDefaultValueSql("NOW()");
         builder.HasIndex(a => a.Timestamp);
 
-        // Configure JsonDocument property with converter for InMemory database
-        var converter = new ValueConverter<JsonDocument?, string?>(
-            v => v == null ? null : v.RootElement.GetRawText(),
-            v => v == null ? null : JsonDocument.Parse(v));
-
         builder.Property(a => a.ChangedFields)
-            .HasColumnType("jsonb")
-            .HasConversion(converter);
+            .HasColumnType("jsonb");
 
         builder.Property(a => a.IpAddress).HasMaxLength(45); // IPv6 max length
         builder.Property(a => a.UserAgent).HasMaxLength(500);

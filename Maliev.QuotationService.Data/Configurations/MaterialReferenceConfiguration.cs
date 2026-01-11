@@ -19,18 +19,11 @@ public class MaterialReferenceConfiguration : IEntityTypeConfiguration<MaterialR
         builder.Property(m => m.MaterialName).HasMaxLength(200).IsRequired();
         builder.Property(m => m.MaterialCategory).HasMaxLength(100);
 
-        // Configure JsonDocument properties with converter for InMemory database
-        var converter = new ValueConverter<JsonDocument?, string?>(
-            v => v == null ? null : v.RootElement.GetRawText(),
-            v => v == null ? null : JsonDocument.Parse(v));
-
         builder.Property(m => m.PhysicalProperties)
-            .HasColumnType("jsonb")
-            .HasConversion(converter);
+            .HasColumnType("jsonb");
 
         builder.Property(m => m.MechanicalProperties)
-            .HasColumnType("jsonb")
-            .HasConversion(converter);
+            .HasColumnType("jsonb");
 
         builder.Property(m => m.AvailabilityStatus).IsRequired();
 
