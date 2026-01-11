@@ -7,29 +7,19 @@ public class CurrencyServiceClient : ICurrencyServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<CurrencyServiceClient> _logger;
-    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public CurrencyServiceClient(
         HttpClient httpClient,
-        ILogger<CurrencyServiceClient> logger,
-        IHttpContextAccessor httpContextAccessor)
+        ILogger<CurrencyServiceClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
-        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<decimal> GetConversionRateAsync(string fromCurrency, string toCurrency, CancellationToken cancellationToken = default)
     {
         try
         {
-            // Forward authorization header from the current request
-            var token = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(token);
-            }
-
             var response = await _httpClient.GetAsync($"/api/v1/rates/{fromCurrency}/{toCurrency}", cancellationToken);
             response.EnsureSuccessStatusCode();
 
@@ -47,13 +37,6 @@ public class CurrencyServiceClient : ICurrencyServiceClient
     {
         try
         {
-            // Forward authorization header from the current request
-            var token = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(token);
-            }
-
             var response = await _httpClient.GetAsync("/api/v1/currencies", cancellationToken);
             response.EnsureSuccessStatusCode();
 

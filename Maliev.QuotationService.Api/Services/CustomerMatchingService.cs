@@ -32,13 +32,17 @@ public class CustomerMatchingService : ICustomerMatchingService
             return suggestions;
         }
 
-        // Simple weighted matching logic
-        var customers = await _context.Customers
-            .Where(c => c.Email == email || c.PhoneNumber == phoneNumber || (name != null && c.Name.Contains(name)))
-            .Take(10)
+        // Search for potential candidates using indexed fields where possible
+        var query = _context.Customers.AsQueryable();
+
+        var candidates = await _context.Customers
+            .Where(c => (email != null && c.Email == email) ||
+                        (phoneNumber != null && c.PhoneNumber == phoneNumber) ||
+                        (name != null && c.Name.StartsWith(name)))
+            .Take(20)
             .ToListAsync(cancellationToken);
 
-        foreach (var customer in customers)
+        foreach (var customer in candidates)
         {
             double score = 0;
             var matchingFields = new List<string>();
@@ -55,10 +59,18 @@ public class CustomerMatchingService : ICustomerMatchingService
                 matchingFields.Add("Phone");
             }
 
-            if (!string.IsNullOrEmpty(name) && customer.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(name))
             {
-                score += 70;
-                matchingFields.Add("Name");
+                if (customer.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    score += 80;
+                    matchingFields.Add("Name (Exact)");
+                }
+                else if (customer.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    score += 50;
+                    matchingFields.Add("Name (Prefix)");
+                }
             }
 
             if (score >= 60)

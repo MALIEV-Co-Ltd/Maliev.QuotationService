@@ -25,10 +25,19 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddExternalServiceClients(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddServiceClient<IMaterialServiceClient, MaterialServiceClient>(configuration, "MaterialService");
-        services.AddServiceClient<ICurrencyServiceClient, CurrencyServiceClient>(configuration, "CurrencyService");
-        services.AddServiceClient<IUploadServiceClient, UploadServiceClient>(configuration, "UploadService");
-        services.AddServiceClient<IPdfServiceClient, PdfServiceClient>(configuration, "PdfService");
+        services.AddTransient<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+
+        services.AddServiceClient<IMaterialServiceClient, MaterialServiceClient>(configuration, "MaterialService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+
+        services.AddServiceClient<ICurrencyServiceClient, CurrencyServiceClient>(configuration, "CurrencyService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+
+        services.AddServiceClient<IUploadServiceClient, UploadServiceClient>(configuration, "UploadService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+
+        services.AddServiceClient<IPdfServiceClient, PdfServiceClient>(configuration, "PdfService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
 
         return services;
     }

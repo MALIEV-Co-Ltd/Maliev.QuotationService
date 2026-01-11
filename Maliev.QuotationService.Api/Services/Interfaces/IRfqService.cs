@@ -80,9 +80,9 @@ public interface IRfqService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Converts an RFQ into a new quotation.
+    /// Marks an RFQ as converted.
     /// </summary>
-    Task<Guid> ConvertToQuotationAsync(
+    Task<Guid> MarkRfqAsConvertedAsync(
         Guid rfqId,
         string currentUserId,
         CancellationToken cancellationToken = default);

@@ -275,6 +275,29 @@ public class RfqController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Marks an RFQ as converted
+    /// </summary>
+    [HttpPost("{id}/convert")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MarkAsConverted(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+        try
+        {
+            await _rfqService.MarkRfqAsConvertedAsync(id, currentUserId, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
     private static RfqResponse MapToResponse(Data.Entities.Rfq rfq, Data.Entities.Customer customer)
     {
         return new RfqResponse

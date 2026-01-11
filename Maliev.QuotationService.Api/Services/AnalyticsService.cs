@@ -71,14 +71,24 @@ public class AnalyticsService : IAnalyticsService
             return new TurnaroundTimeReport();
         }
 
-        var durations = conversionTimes.Select(x => (x.CreatedAt - x.RfqCreatedAt).TotalDays).ToList();
+        var durations = conversionTimes.Select(x => (x.CreatedAt - x.RfqCreatedAt).TotalDays).OrderBy(d => d).ToList();
+        double median;
+        int count = durations.Count;
+        if (count % 2 == 0)
+        {
+            median = (durations[count / 2 - 1] + durations[count / 2]) / 2;
+        }
+        else
+        {
+            median = durations[count / 2];
+        }
 
         return new TurnaroundTimeReport
         {
             AverageDays = durations.Average(),
             MinDays = durations.Min(),
             MaxDays = durations.Max(),
-            MedianDays = durations.OrderBy(d => d).ElementAt(durations.Count / 2)
+            MedianDays = median
         };
     }
 

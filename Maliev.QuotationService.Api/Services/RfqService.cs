@@ -405,9 +405,9 @@ public class RfqService : IRfqService
     }
 
     /// <summary>
-    /// Converts an RFQ into a new quotation.
+    /// Marks an RFQ as converted.
     /// </summary>
-    public async Task<Guid> ConvertToQuotationAsync(
+    public async Task<Guid> MarkRfqAsConvertedAsync(
         Guid rfqId,
         string currentUserId,
         CancellationToken cancellationToken = default)
@@ -423,7 +423,7 @@ public class RfqService : IRfqService
 
         // In a real implementation, this would likely take more parameters from the UI
         // such as line items, pricing, etc. for the initial draft.
-        _logger.LogInformation("Converting RFQ {RfqId} to quotation for customer {CustomerId}", rfqId, rfq.CustomerId);
+        _logger.LogInformation("Marking RFQ {RfqId} as converted for customer {CustomerId}", rfqId, rfq.CustomerId);
 
         rfq.Status = RfqStatus.Converted;
         rfq.UpdatedAt = DateTime.UtcNow;
@@ -434,7 +434,6 @@ public class RfqService : IRfqService
 
         return rfq.Id;
     }
-
     private static bool IsValidStatusTransition(RfqStatus from, RfqStatus to)
     {
         // Define valid status transitions
