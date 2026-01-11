@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 
 namespace Maliev.QuotationService.Api.ExternalClients;
@@ -7,7 +8,9 @@ public class PdfServiceClient : IPdfServiceClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<PdfServiceClient> _logger;
 
-    public PdfServiceClient(HttpClient httpClient, ILogger<PdfServiceClient> logger)
+    public PdfServiceClient(
+        HttpClient httpClient,
+        ILogger<PdfServiceClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;

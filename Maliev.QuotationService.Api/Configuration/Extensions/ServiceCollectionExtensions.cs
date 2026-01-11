@@ -12,21 +12,32 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IQuotationService, Maliev.QuotationService.Api.Services.QuotationService>();
         services.AddScoped<IRfqService, Maliev.QuotationService.Api.Services.RfqService>();
+        services.AddScoped<ICustomerMatchingService, Maliev.QuotationService.Api.Services.CustomerMatchingService>();
+        services.AddScoped<IAnalyticsService, Maliev.QuotationService.Api.Services.AnalyticsService>();
 
         // IAM & Authorization
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
-        services.AddIAMRegistration<QuotationIAMRegistrationService>();
+        services.AddIAMRegistration<QuotationIAMRegistrationService>("quotation");
 
         return services;
     }
 
     public static IServiceCollection AddExternalServiceClients(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddServiceClient<IMaterialServiceClient, MaterialServiceClient>(configuration, "MaterialService");
+        services.AddTransient<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
 
-        // Register IAM HttpClient for use via IHttpClientFactory
-        services.AddServiceClient(configuration, "IAMService");
+        services.AddServiceClient<IMaterialServiceClient, MaterialServiceClient>(configuration, "MaterialService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+
+        services.AddServiceClient<ICurrencyServiceClient, CurrencyServiceClient>(configuration, "CurrencyService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+
+        services.AddServiceClient<IUploadServiceClient, UploadServiceClient>(configuration, "UploadService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+
+        services.AddServiceClient<IPdfServiceClient, PdfServiceClient>(configuration, "PdfService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
 
         return services;
     }

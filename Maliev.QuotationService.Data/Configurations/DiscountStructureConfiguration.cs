@@ -19,6 +19,10 @@ public class DiscountStructureConfiguration : IEntityTypeConfiguration<DiscountS
 
         builder.HasIndex(d => d.QuotationVersionId);
 
+
         // QuotationVersion relationship configured in QuotationVersionConfiguration
+
+        // Matching query filter to avoid warnings with required relationship
+        builder.HasQueryFilter(d => !d.QuotationVersion.Quotation.IsDeleted);
     }
 }

@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 
 namespace Maliev.QuotationService.Api.ExternalClients;
@@ -7,7 +8,9 @@ public class UploadServiceClient : IUploadServiceClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<UploadServiceClient> _logger;
 
-    public UploadServiceClient(HttpClient httpClient, ILogger<UploadServiceClient> logger)
+    public UploadServiceClient(
+        HttpClient httpClient,
+        ILogger<UploadServiceClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;

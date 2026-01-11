@@ -24,14 +24,8 @@ public class QuotationVersionConfiguration : IEntityTypeConfiguration<QuotationV
         builder.Property(v => v.TotalPrice).HasPrecision(18, 2).IsRequired();
         builder.Property(v => v.CurrencyCode).HasMaxLength(3).IsRequired();
 
-        // Configure JsonDocument property with converter for InMemory database
-        var converter = new ValueConverter<JsonDocument?, string?>(
-            v => v == null ? null : v.RootElement.GetRawText(),
-            v => v == null ? null : JsonDocument.Parse(v));
-
         builder.Property(v => v.DeliveryExpectations)
-            .HasColumnType("jsonb")
-            .HasConversion(converter);
+            .HasColumnType("jsonb");
 
         builder.Property(v => v.SpecialTerms).HasMaxLength(2000);
 
@@ -48,5 +42,8 @@ public class QuotationVersionConfiguration : IEntityTypeConfiguration<QuotationV
             .WithOne(d => d.QuotationVersion)
             .HasForeignKey(d => d.QuotationVersionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Matching query filter to avoid warnings with required relationship
+        builder.HasQueryFilter(v => !v.Quotation.IsDeleted);
     }
 }

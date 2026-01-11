@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 
 namespace Maliev.QuotationService.Api.ExternalClients;
@@ -7,7 +8,9 @@ public class MaterialServiceClient : IMaterialServiceClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<MaterialServiceClient> _logger;
 
-    public MaterialServiceClient(HttpClient httpClient, ILogger<MaterialServiceClient> logger)
+    public MaterialServiceClient(
+        HttpClient httpClient,
+        ILogger<MaterialServiceClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
@@ -17,7 +20,7 @@ public class MaterialServiceClient : IMaterialServiceClient
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/api/v1/materials/{materialId}", cancellationToken);
+            var response = await _httpClient.GetAsync($"/material/v1/materials/{materialId}", cancellationToken);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {

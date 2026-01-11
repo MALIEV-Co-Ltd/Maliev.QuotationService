@@ -9,26 +9,26 @@ namespace Maliev.QuotationService.Api.Services.IAM;
 public class QuotationIAMRegistrationService : IAMRegistrationService
 {
     public QuotationIAMRegistrationService(
-        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
         ILogger<QuotationIAMRegistrationService> logger)
-        : base(httpClientFactory, logger, "quotation")
+        : base(configuration, logger, "quotation")
     {
     }
 
     protected override IEnumerable<PermissionRegistration> GetPermissions()
     {
-        return QuotationPermissions.GetPermissions().Select(p => new PermissionRegistration
+        return QuotationPermissions.AllWithDescriptions.Select(p => new PermissionRegistration
         {
-            PermissionId = p.Id,
-            Description = p.Description
+            PermissionId = p.Key,
+            Description = p.Value
         });
     }
 
     protected override IEnumerable<RoleRegistration> GetPredefinedRoles()
     {
-        return QuotationPredefinedRoles.GetRoles().Select(r => new RoleRegistration
+        return QuotationPredefinedRoles.All.Select(r => new RoleRegistration
         {
-            RoleId = $"roles.quotation.{r.Name}",
+            RoleId = r.RoleId,
             Description = r.Description,
             PermissionIds = r.Permissions.ToList(),
             IsCustom = false

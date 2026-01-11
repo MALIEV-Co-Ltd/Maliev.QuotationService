@@ -8,29 +8,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using MassTransit;
+using Maliev.QuotationService.Tests.Fixtures;
 
 namespace Maliev.QuotationService.Tests.Unit.Services;
 
-public class QuotationStateManagementTests
+public class QuotationStateManagementTests : BaseIntegrationTest
 {
     private readonly Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>> _mockLogger;
-    private readonly QuotationDbContext _context;
     private readonly Maliev.QuotationService.Api.Services.QuotationService _quotationService;
     private readonly MetricsService _metricsService;
     private readonly Mock<IPublishEndpoint> _mockPublishEndpoint;
 
-    public QuotationStateManagementTests()
+    public QuotationStateManagementTests(IntegrationTestWebAppFactory factory) : base(factory)
     {
-        var options = new DbContextOptionsBuilder<QuotationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
-
-        _context = new QuotationDbContext(options);
         _mockLogger = new Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>>();
         _metricsService = new MetricsService();
         _mockPublishEndpoint = new Mock<IPublishEndpoint>();
-        _quotationService = new Maliev.QuotationService.Api.Services.QuotationService(_context, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
+        _quotationService = new Maliev.QuotationService.Api.Services.QuotationService(DbContext, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
     }
 
     [Fact]
@@ -57,9 +51,9 @@ public class QuotationStateManagementTests
             UpdatedAt = DateTime.UtcNow
         };
 
-        _context.Customers.Add(customer);
-        _context.Quotations.Add(quotation);
-        await _context.SaveChangesAsync();
+        DbContext.Customers.Add(customer);
+        DbContext.Quotations.Add(quotation);
+        await DbContext.SaveChangesAsync();
 
         // Act
         var result = await _quotationService.UpdateStatusAsync(
@@ -72,7 +66,7 @@ public class QuotationStateManagementTests
         Assert.Equal(QuotationStatus.PendingApproval, result.Status);
 
         // Verify audit log was created
-        var auditLog = await _context.AuditLogEntries
+        var auditLog = await DbContext.AuditLogEntries
             .FirstOrDefaultAsync(a => a.EntityId == quotation.Id && a.ActionType == AuditActionType.Update);
         Assert.NotNull(auditLog);
     }
@@ -101,9 +95,9 @@ public class QuotationStateManagementTests
             UpdatedAt = DateTime.UtcNow
         };
 
-        _context.Customers.Add(customer);
-        _context.Quotations.Add(quotation);
-        await _context.SaveChangesAsync();
+        DbContext.Customers.Add(customer);
+        DbContext.Quotations.Add(quotation);
+        await DbContext.SaveChangesAsync();
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>

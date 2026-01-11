@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 
 namespace Maliev.QuotationService.Api.ExternalClients;
@@ -7,7 +8,9 @@ public class CurrencyServiceClient : ICurrencyServiceClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<CurrencyServiceClient> _logger;
 
-    public CurrencyServiceClient(HttpClient httpClient, ILogger<CurrencyServiceClient> logger)
+    public CurrencyServiceClient(
+        HttpClient httpClient,
+        ILogger<CurrencyServiceClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;

@@ -21,14 +21,8 @@ public class RfqConfiguration : IEntityTypeConfiguration<Rfq>
 
         builder.HasIndex(r => new { r.ChannelSource, r.Status, r.CreatedAt });
 
-        // Configure JsonDocument property with converter for InMemory database
-        var converter = new ValueConverter<JsonDocument?, string?>(
-            v => v == null ? null : v.RootElement.GetRawText(),
-            v => v == null ? null : JsonDocument.Parse(v));
-
         builder.Property(r => r.RequestDetails)
-            .HasColumnType("jsonb")
-            .HasConversion(converter);
+            .HasColumnType("jsonb");
 
         builder.Property(r => r.AssignedStaffUserId).HasMaxLength(50);
         builder.HasIndex(r => r.AssignedStaffUserId);

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Maliev.QuotationService.Api.DTOs.Requests;
+using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Tests.Fixtures;
@@ -178,6 +179,8 @@ public class AuthorizationTests : BaseIntegrationTest
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<PagedResponse<QuotationResponse>>();
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -198,6 +201,8 @@ public class AuthorizationTests : BaseIntegrationTest
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<PagedResponse<RfqResponse>>();
+        Assert.NotNull(result);
     }
 
     private async Task<Customer> CreateTestCustomerAsync()

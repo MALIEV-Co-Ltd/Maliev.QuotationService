@@ -22,18 +22,11 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
         builder.HasIndex(c => c.Name);
 
-        // Configure JsonDocument properties with converter for InMemory database
-        var converter = new ValueConverter<JsonDocument?, string?>(
-            v => v == null ? null : v.RootElement.GetRawText(),
-            v => v == null ? null : JsonDocument.Parse(v));
-
         builder.Property(c => c.ContactInfo)
-            .HasColumnType("jsonb")
-            .HasConversion(converter);
+            .HasColumnType("jsonb");
 
         builder.Property(c => c.MergeHistory)
-            .HasColumnType("jsonb")
-            .HasConversion(converter);
+            .HasColumnType("jsonb");
 
         builder.Property(c => c.CreatedAt).HasDefaultValueSql("NOW()");
         builder.Property(c => c.UpdatedAt).IsRequired();

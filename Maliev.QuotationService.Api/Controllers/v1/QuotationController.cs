@@ -99,8 +99,8 @@ public class QuotationController : ControllerBase
     /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpGet]
     [Authorize(Policy = QuotationPermissions.QuotationsRead)]
-    [ProducesResponseType(typeof(List<QuotationResponse>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<QuotationResponse>>> GetQuotations(
+    [ProducesResponseType(typeof(PagedResponse<QuotationResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResponse<QuotationResponse>>> GetQuotations(
         [FromQuery] QuotationStatus? status = null,
         [FromQuery] Guid? customerId = null,
         [FromQuery] DateTime? fromDate = null,
@@ -124,11 +124,16 @@ public class QuotationController : ControllerBase
             responses.Add(await MapToResponseAsync(quotation, cancellationToken));
         }
 
-        Response.Headers.Append("X-Total-Count", totalCount.ToString());
-        Response.Headers.Append("X-Page", page.ToString());
-        Response.Headers.Append("X-Page-Size", pageSize.ToString());
-
-        return Ok(responses);
+        return Ok(new PagedResponse<QuotationResponse>
+        {
+            Data = responses,
+            Meta = new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            }
+        });
     }
 
     /// <summary>
@@ -172,6 +177,7 @@ public class QuotationController : ControllerBase
     [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<QuotationResponse>> UpdateQuotation(
         Guid id,
         [FromBody] UpdateQuotationRequest request,
@@ -200,6 +206,10 @@ public class QuotationController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { message = "Quotation was modified by another user. Please reload and try again." });
+        }
     }
 
     /// <summary>
@@ -215,6 +225,7 @@ public class QuotationController : ControllerBase
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<QuotationResponse>> UpdateQuotationStatus(
         Guid id,
         [FromBody] UpdateQuotationStatusRequest request,
@@ -243,6 +254,10 @@ public class QuotationController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { message = "Quotation was modified by another user. Please reload and try again." });
         }
     }
 
@@ -308,55 +323,24 @@ public class QuotationController : ControllerBase
     {
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
-        // Verify quotation exists
-        var quotation = await _quotationService.GetByIdAsync(id, cancellationToken);
-        if (quotation == null)
+        try
         {
-            return NotFound(new { message = $"Quotation with ID {id} not found" });
-        }
+            var note = await _quotationService.AddNoteAsync(id, request.Content, currentUserId, cancellationToken);
 
-        // Create internal note
-        var note = new InternalNote
-        {
-            Id = Guid.NewGuid(),
-            QuotationId = id,
-            AuthorUserId = currentUserId,
-            Content = request.Content,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.InternalNotes.Add(note);
-
-        // Create audit log entry
-        var auditEntry = new AuditLogEntry
-        {
-            Id = Guid.NewGuid(),
-            EntityType = AuditEntityType.Quotation,
-            EntityId = id,
-            UserId = currentUserId,
-            ActionType = AuditActionType.Update,
-            Timestamp = DateTime.UtcNow,
-            ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+            var response = new InternalNoteResponse
             {
-                NoteAdded = new { Content = request.Content.Substring(0, Math.Min(50, request.Content.Length)) + "..." }
-            }))
-        };
+                Id = note.Id,
+                AuthorUserId = note.AuthorUserId,
+                Content = note.Content,
+                CreatedAt = note.CreatedAt
+            };
 
-        _context.AuditLogEntries.Add(auditEntry);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        // Emit metric
-        _metricsService.RecordInternalNoteCreated();
-
-        var response = new InternalNoteResponse
+            return CreatedAtAction(nameof(GetQuotationById), new { id }, response);
+        }
+        catch (KeyNotFoundException ex)
         {
-            Id = note.Id,
-            AuthorUserId = note.AuthorUserId,
-            Content = note.Content,
-            CreatedAt = note.CreatedAt
-        };
-
-        return CreatedAtAction(nameof(GetQuotationById), new { id }, response);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -523,7 +507,8 @@ public class QuotationController : ControllerBase
                 AuthorizationReason = version.DiscountStructures.First().AuthorizationReason
             } : null,
             DeliveryExpectations = version.DeliveryExpectations != null
-                ? (version.DeliveryExpectations.RootElement.TryGetProperty("expectations", out var exp)
+                ? (version.DeliveryExpectations.RootElement.ValueKind == JsonValueKind.Object &&
+                   version.DeliveryExpectations.RootElement.TryGetProperty("expectations", out var exp)
                     ? exp.GetString()
                     : version.DeliveryExpectations.RootElement.GetRawText())
                 : null,

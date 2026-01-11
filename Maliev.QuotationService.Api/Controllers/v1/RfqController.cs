@@ -46,38 +46,20 @@ public class RfqController : ControllerBase
     {
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
-        // Find or create customer
-        var customer = await _context.Customers
-            .FirstOrDefaultAsync(c => c.Email == request.CustomerEmail, cancellationToken);
-
-        if (customer == null)
-        {
-            customer = new Data.Entities.Customer
-            {
-                Id = Guid.NewGuid(),
-                Email = request.CustomerEmail,
-                Name = request.CustomerName,
-                PhoneNumber = request.CustomerPhoneNumber,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _context.Customers.Add(customer);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation("Created new customer {CustomerId} with email {Email}", customer.Id, customer.Email);
-        }
-
-        // Create RFQ
+        // RFQ and Customer creation is now atomic within the service
         var rfq = await _rfqService.CreateAsync(
-            customerId: customer.Id,
+            customerEmail: request.CustomerEmail,
+            customerName: request.CustomerName,
+            customerPhoneNumber: request.CustomerPhoneNumber,
             channelSource: request.ChannelSource,
             requestDetails: request.RequestDetails,
             uploadServiceFileIds: request.UploadServiceFileIds,
             currentUserId: currentUserId,
             cancellationToken: cancellationToken);
 
-        var response = MapToResponse(rfq, customer);
+        // Reload to get customer data
+        var fullRfq = await _rfqService.GetByIdAsync(rfq.Id, cancellationToken);
+        var response = MapToResponse(fullRfq!, fullRfq!.Customer);
 
         return CreatedAtAction(nameof(GetRfqById), new { id = rfq.Id }, response);
     }
@@ -87,8 +69,8 @@ public class RfqController : ControllerBase
     /// </summary>
     [HttpGet]
     [Authorize(Policy = QuotationPermissions.QuotationsRead)]
-    [ProducesResponseType(typeof(List<RfqResponse>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<RfqResponse>>> GetRfqs(
+    [ProducesResponseType(typeof(PagedResponse<RfqResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResponse<RfqResponse>>> GetRfqs(
         [FromQuery] RfqChannel? channel = null,
         [FromQuery] RfqStatus? status = null,
         [FromQuery] Guid? customerId = null,
@@ -112,11 +94,16 @@ public class RfqController : ControllerBase
 
         var responses = rfqs.Select(r => MapToResponse(r, r.Customer)).ToList();
 
-        Response.Headers.Append("X-Total-Count", totalCount.ToString());
-        Response.Headers.Append("X-Page", page.ToString());
-        Response.Headers.Append("X-Page-Size", pageSize.ToString());
-
-        return Ok(responses);
+        return Ok(new PagedResponse<RfqResponse>
+        {
+            Data = responses,
+            Meta = new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            }
+        });
     }
 
     /// <summary>
@@ -288,6 +275,29 @@ public class RfqController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Marks an RFQ as converted
+    /// </summary>
+    [HttpPost("{id}/convert")]
+    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MarkAsConverted(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+        try
+        {
+            await _rfqService.MarkRfqAsConvertedAsync(id, currentUserId, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
     private static RfqResponse MapToResponse(Data.Entities.Rfq rfq, Data.Entities.Customer customer)
     {
         return new RfqResponse

@@ -93,9 +93,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 await connection.GetDatabase().PingAsync();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[TestFactory] Warning: Redis connection check failed, but continuing: {ex.Message}");
+            throw;
         }
 
         // Apply database migrations
@@ -146,7 +146,6 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         using (var scope = host.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
-            Console.WriteLine($"[TestFactory] App DbContext connection string: {dbContext.Database.GetConnectionString()}");
         }
 
         return host;
@@ -155,6 +154,14 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:SecurityKey"] = "test-secret-key-at-least-32-characters-long"
+            });
+        });
+
         builder.ConfigureTestServices(services =>
         {
             services.PostConfigureAll<JwtBearerOptions>(options =>
@@ -254,19 +261,15 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         try
         {
             await using var context = CreateDbContext();
-            Console.WriteLine($"[TestFactory] Applying migrations to: {context.Database.GetConnectionString()}");
             await context.Database.MigrateAsync();
-            Console.WriteLine("[TestFactory] Migrations applied successfully.");
 
             // Verify tables exist
             var tables = await context.Database
                 .SqlQueryRaw<string>("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
                 .ToListAsync();
-            Console.WriteLine($"[TestFactory] Tables in database after migration: {string.Join(", ", tables)}");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[TestFactory] Error applying migrations: {ex}");
             throw;
         }
     }

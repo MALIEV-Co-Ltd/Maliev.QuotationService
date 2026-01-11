@@ -51,7 +51,7 @@ public class AuthorizationAuditMiddleware
             IpAddress = context.Connection.RemoteIpAddress?.ToString(),
             UserAgent = context.Request.Headers.UserAgent.ToString(),
             // Store details about the failed request in ChangedFields
-            ChangedFields = System.Text.Json.JsonDocument.Parse($$"""{ "path": "{{path}}", "method": "{{method}}" }""")
+            ChangedFields = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(new { path = path.ToString(), method }))
         };
 
         try
