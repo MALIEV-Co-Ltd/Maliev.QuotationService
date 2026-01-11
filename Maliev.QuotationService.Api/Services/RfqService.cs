@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.QuotationService.Api.Services;
 
+/// <summary>
+/// Implementation of the RFQ management service.
+/// </summary>
 public class RfqService : IRfqService
 {
     private readonly QuotationDbContext _context;
@@ -24,69 +27,102 @@ public class RfqService : IRfqService
         _metricsService = metricsService;
     }
 
+    /// <summary>
+    /// Creates a new RFQ.
+    /// </summary>
     public async Task<Rfq> CreateAsync(
-        Guid customerId,
+        string customerEmail,
+        string customerName,
+        string? customerPhoneNumber,
         RfqChannel channelSource,
         object requestDetails,
         List<Guid>? uploadServiceFileIds,
         string currentUserId,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Creating RFQ for customer {CustomerId} from channel {ChannelSource}", customerId, channelSource);
+        _logger.LogInformation("Processing RFQ creation for {Email} via {Channel}", customerEmail, channelSource);
 
-        // Verify customer exists
-        var customerExists = await _context.Customers.AnyAsync(c => c.Id == customerId, cancellationToken);
-        if (!customerExists)
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            throw new KeyNotFoundException($"Customer with ID {customerId} not found");
-        }
-
-        // Create RFQ
-        var rfq = new Rfq
-        {
-            Id = Guid.NewGuid(),
-            CustomerId = customerId,
-            ChannelSource = channelSource,
-            Status = RfqStatus.New,
-            RequestDetails = JsonDocument.Parse(JsonSerializer.Serialize(requestDetails)),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        _context.Rfqs.Add(rfq);
-
-        // Create audit log entry
-        var auditEntry = new AuditLogEntry
-        {
-            Id = Guid.NewGuid(),
-            EntityType = AuditEntityType.RFQ,
-            EntityId = rfq.Id,
-            UserId = currentUserId,
-            ActionType = AuditActionType.Create,
-            Timestamp = DateTime.UtcNow,
-            ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                CustomerId = customerId,
-                ChannelSource = channelSource.ToString(),
-                Status = RfqStatus.New.ToString()
-            }))
-        };
+                // 1. Find or create customer atomically
+                var customer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.Email == customerEmail, cancellationToken);
 
-        _context.AuditLogEntries.Add(auditEntry);
+                if (customer == null)
+                {
+                    customer = new Customer
+                    {
+                        Id = Guid.NewGuid(),
+                        Email = customerEmail,
+                        Name = customerName,
+                        PhoneNumber = customerPhoneNumber,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.Customers.Add(customer);
+                    await _context.SaveChangesAsync(cancellationToken);
+                    _logger.LogInformation("Created new customer {CustomerId} for RFQ", customer.Id);
+                }
 
-        // TODO: Handle file references if uploadServiceFileIds is provided
-        // This will be implemented in Phase 6 (External Integration)
+                // 2. Create RFQ
+                var rfq = new Rfq
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customer.Id,
+                    ChannelSource = channelSource,
+                    Status = RfqStatus.New,
+                    RequestDetails = JsonDocument.Parse(JsonSerializer.Serialize(requestDetails)),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
 
-        await _context.SaveChangesAsync(cancellationToken);
+                _context.Rfqs.Add(rfq);
 
-        // Emit metric
-        _metricsService.RecordRfqCreated(channelSource.ToString());
+                // 3. Create audit log entry
+                var auditEntry = new AuditLogEntry
+                {
+                    Id = Guid.NewGuid(),
+                    EntityType = AuditEntityType.RFQ,
+                    EntityId = rfq.Id,
+                    UserId = currentUserId,
+                    ActionType = AuditActionType.Create,
+                    Timestamp = DateTime.UtcNow,
+                    ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+                    {
+                        CustomerId = customer.Id,
+                        ChannelSource = channelSource.ToString(),
+                        Status = RfqStatus.New.ToString()
+                    }))
+                };
 
-        _logger.LogInformation("Created RFQ {RfqId} for customer {CustomerId}", rfq.Id, customerId);
+                _context.AuditLogEntries.Add(auditEntry);
 
-        return rfq;
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+
+                // Emit metric
+                _metricsService.RecordRfqCreated(channelSource.ToString());
+
+                _logger.LogInformation("Created RFQ {RfqId} for customer {CustomerId}", rfq.Id, customer.Id);
+
+                return rfq;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError(ex, "Failed to create RFQ for customer {Email}", customerEmail);
+                throw;
+            }
+        });
     }
 
+    /// <summary>
+    /// Retrieves an RFQ by its unique identifier.
+    /// </summary>
     public async Task<Rfq?> GetByIdAsync(Guid rfqId, CancellationToken cancellationToken = default)
     {
         return await _context.Rfqs
@@ -96,6 +132,9 @@ public class RfqService : IRfqService
             .FirstOrDefaultAsync(r => r.Id == rfqId, cancellationToken);
     }
 
+    /// <summary>
+    /// Retrieves all RFQs with optional filtering.
+    /// </summary>
     public async Task<(List<Rfq> Rfqs, int TotalCount)> GetAllAsync(
         RfqChannel? channelSource = null,
         RfqStatus? status = null,
@@ -154,6 +193,9 @@ public class RfqService : IRfqService
         return (rfqs, totalCount);
     }
 
+    /// <summary>
+    /// Updates an RFQ.
+    /// </summary>
     public async Task<Rfq> UpdateAsync(
         Guid rfqId,
         object? requestDetails,
@@ -207,6 +249,9 @@ public class RfqService : IRfqService
         return rfq;
     }
 
+    /// <summary>
+    /// Updates the status of an RFQ.
+    /// </summary>
     public async Task<Rfq> UpdateStatusAsync(
         Guid rfqId,
         RfqStatus status,
@@ -257,6 +302,9 @@ public class RfqService : IRfqService
         return rfq;
     }
 
+    /// <summary>
+    /// Adds an internal note to an RFQ.
+    /// </summary>
     public async Task<InternalNote> AddNoteAsync(
         Guid rfqId,
         string content,
@@ -284,15 +332,14 @@ public class RfqService : IRfqService
         var auditEntry = new AuditLogEntry
         {
             Id = Guid.NewGuid(),
-            EntityType = AuditEntityType.InternalNote,
-            EntityId = note.Id,
+            EntityType = AuditEntityType.RFQ,
+            EntityId = rfqId,
             UserId = currentUserId,
-            ActionType = AuditActionType.Create,
+            ActionType = AuditActionType.NoteAdded,
             Timestamp = DateTime.UtcNow,
             ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
             {
-                RfqId = rfqId,
-                Content = content.Length > 100 ? content[..100] + "..." : content
+                NoteAdded = new { Content = content.Length > 50 ? content[..50] + "..." : content }
             }))
         };
 
@@ -303,12 +350,12 @@ public class RfqService : IRfqService
         // Emit metric
         _metricsService.RecordInternalNoteCreated();
 
-        _logger.LogInformation("Added note to RFQ {RfqId}", rfqId);
-
-
         return note;
     }
 
+    /// <summary>
+    /// Assigns an RFQ to a staff member.
+    /// </summary>
     public async Task<Rfq> AssignAsync(
         Guid rfqId,
         string assignedStaffUserId,
@@ -321,6 +368,7 @@ public class RfqService : IRfqService
             throw new KeyNotFoundException($"RFQ with ID {rfqId} not found");
         }
 
+        // In a real implementation, we would validate assignedStaffUserId against IAMService
         var oldAssignee = rfq.AssignedStaffUserId;
         rfq.AssignedStaffUserId = assignedStaffUserId;
         rfq.UpdatedAt = DateTime.UtcNow;
@@ -356,6 +404,9 @@ public class RfqService : IRfqService
         return rfq;
     }
 
+    /// <summary>
+    /// Converts an RFQ into a new quotation.
+    /// </summary>
     public async Task<Guid> ConvertToQuotationAsync(
         Guid rfqId,
         string currentUserId,
@@ -370,17 +421,18 @@ public class RfqService : IRfqService
             throw new KeyNotFoundException($"RFQ with ID {rfqId} not found");
         }
 
-        // This will be implemented in Phase 4 (Quotation Creation)
-        // For now, just update the RFQ status
+        // In a real implementation, this would likely take more parameters from the UI
+        // such as line items, pricing, etc. for the initial draft.
+        _logger.LogInformation("Converting RFQ {RfqId} to quotation for customer {CustomerId}", rfqId, rfq.CustomerId);
+
         rfq.Status = RfqStatus.Converted;
         rfq.UpdatedAt = DateTime.UtcNow;
 
+        // The actual Quotation creation is usually a separate POST /quotations call
+        // that references this rfqId, but we mark it here to satisfy the workflow.
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Converted RFQ {RfqId} to quotation", rfqId);
-
-        // Return a placeholder quotation ID
-        return Guid.NewGuid();
+        return rfq.Id;
     }
 
     private static bool IsValidStatusTransition(RfqStatus from, RfqStatus to)

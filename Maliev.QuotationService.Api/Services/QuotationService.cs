@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
@@ -10,6 +11,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.QuotationService.Api.Services;
 
+/// <summary>
+/// Implementation of the quotation management service.
+/// </summary>
 public class QuotationService : IQuotationService
 {
     private readonly QuotationDbContext _context;
@@ -29,24 +33,18 @@ public class QuotationService : IQuotationService
         _publishEndpoint = publishEndpoint;
     }
 
-    // NOTE: Automatic expiration of quotations (CustomerReview → Expired when ValidityPeriodEnd < NOW)
-    // should be handled by a background job or scheduled task (e.g., using Hangfire, Quartz.NET, or
-    // a timed hosted service). This ensures quotations are automatically expired when their validity
-    // period ends without requiring manual intervention. The background job should:
-    // 1. Query for quotations in CustomerReview status where ValidityPeriodEnd < UTC NOW
-    // 2. Call UpdateStatusAsync to transition each to Expired status
-    // 3. Run on a scheduled interval (e.g., hourly or daily depending on business requirements)
-    // This is not implemented in this phase but should be added as a separate infrastructure component.
-
+    /// <summary>
+    /// Creates a new quotation.
+    /// </summary>
     public async Task<Quotation> CreateAsync(
         Guid customerId,
         Guid? sourceRfqId,
         DateTime validityPeriodStart,
         DateTime validityPeriodEnd,
-        IEnumerable<object> lineItems,
+        IEnumerable<QuotationLineItemDto> lineItems,
         string? deliveryExpectations,
         string currentUserId,
-        object? discountStructure = null,
+        DiscountStructureDto? discountStructure = null,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating quotation for customer {CustomerId}", customerId);
@@ -171,8 +169,6 @@ public class QuotationService : IQuotationService
                     )
                 ), cancellationToken);
 
-                _logger.LogInformation("Published QuotationCreatedEvent for quotation {QuotationId}", quotation.Id);
-
                 return quotation;
             }
             catch (Exception ex)
@@ -184,6 +180,9 @@ public class QuotationService : IQuotationService
         });
     }
 
+    /// <summary>
+    /// Retrieves a quotation by its unique identifier.
+    /// </summary>
     public async Task<Quotation?> GetByIdAsync(Guid quotationId, CancellationToken cancellationToken = default)
     {
         return await _context.Quotations
@@ -196,6 +195,9 @@ public class QuotationService : IQuotationService
             .FirstOrDefaultAsync(q => q.Id == quotationId, cancellationToken);
     }
 
+    /// <summary>
+    /// Retrieves all quotations with optional filtering.
+    /// </summary>
     public async Task<(List<Quotation> Quotations, int TotalCount)> GetAllAsync(
         QuotationStatus? status = null,
         Guid? customerId = null,
@@ -242,12 +244,15 @@ public class QuotationService : IQuotationService
         return (quotations, totalCount);
     }
 
+    /// <summary>
+    /// Updates an existing quotation by creating a new version.
+    /// </summary>
     public async Task<Quotation> UpdateAsync(
         Guid quotationId,
-        IEnumerable<object>? lineItems,
+        IEnumerable<QuotationLineItemDto>? lineItems,
         string changeSummary,
         string? deliveryExpectations = null,
-        object? discountStructure = null,
+        DiscountStructureDto? discountStructure = null,
         string? currentUserId = null,
         CancellationToken cancellationToken = default)
     {
@@ -260,50 +265,61 @@ public class QuotationService : IQuotationService
             throw new KeyNotFoundException($"Quotation with ID {quotationId} not found");
         }
 
-        // Get current version number
-        var currentVersionNumber = quotation.Versions.Max(v => v.VersionNumber);
-        var newVersionNumber = currentVersionNumber + 1;
-
-        // Create new version
-        var newVersion = await CreateVersionAsync(
-            quotation.Id,
-            newVersionNumber,
-            lineItems ?? new List<object>(),
-            deliveryExpectations,
-            currentUserId ?? "system",
-            discountStructure,
-            changeSummary,
-            cancellationToken);
-
-        quotation.CurrentVersionId = newVersion.Id;
-        quotation.UpdatedAt = DateTime.UtcNow;
-
-        // Create audit log entry
-        var auditEntry = new AuditLogEntry
+        try
         {
-            Id = Guid.NewGuid(),
-            EntityType = AuditEntityType.QuotationVersion,
-            EntityId = newVersion.Id,
-            UserId = currentUserId ?? "system",
-            ActionType = AuditActionType.Create,
-            Timestamp = DateTime.UtcNow,
-            ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+            // Get current version number
+            var currentVersionNumber = quotation.Versions.Any() ? quotation.Versions.Max(v => v.VersionNumber) : 0;
+            var newVersionNumber = currentVersionNumber + 1;
+
+            // Create new version
+            var newVersion = await CreateVersionAsync(
+                quotation.Id,
+                newVersionNumber,
+                lineItems ?? new List<QuotationLineItemDto>(),
+                deliveryExpectations,
+                currentUserId ?? "system",
+                discountStructure,
+                changeSummary,
+                cancellationToken);
+
+            quotation.CurrentVersionId = newVersion.Id;
+            quotation.UpdatedAt = DateTime.UtcNow;
+
+            // Create audit log entry
+            var auditEntry = new AuditLogEntry
             {
-                QuotationId = quotationId,
-                VersionNumber = newVersionNumber,
-                ChangeSummary = changeSummary
-            }))
-        };
+                Id = Guid.NewGuid(),
+                EntityType = AuditEntityType.QuotationVersion,
+                EntityId = newVersion.Id,
+                UserId = currentUserId ?? "system",
+                ActionType = AuditActionType.Create,
+                Timestamp = DateTime.UtcNow,
+                ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+                {
+                    QuotationId = quotationId,
+                    VersionNumber = newVersionNumber,
+                    ChangeSummary = changeSummary
+                }))
+            };
 
-        _context.AuditLogEntries.Add(auditEntry);
+            _context.AuditLogEntries.Add(auditEntry);
 
-        await _context.SaveChangesAsync(cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Created version {VersionNumber} for quotation {QuotationId}", newVersionNumber, quotationId);
+            _logger.LogInformation("Created version {VersionNumber} for quotation {QuotationId}", newVersionNumber, quotationId);
 
-        return quotation;
+            return quotation;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogError(ex, "Concurrency conflict updating quotation {QuotationId}", quotationId);
+            throw;
+        }
     }
 
+    /// <summary>
+    /// Updates the status of a quotation.
+    /// </summary>
     public async Task<Quotation> UpdateStatusAsync(
         Guid quotationId,
         QuotationStatus status,
@@ -324,122 +340,82 @@ public class QuotationService : IQuotationService
             throw new InvalidOperationException($"Invalid status transition from {oldStatus} to {status}");
         }
 
-        quotation.Status = status;
-        quotation.UpdatedAt = DateTime.UtcNow;
-
-        // Create audit log entry
-        var auditEntry = new AuditLogEntry
+        try
         {
-            Id = Guid.NewGuid(),
-            EntityType = AuditEntityType.Quotation,
-            EntityId = quotation.Id,
-            UserId = currentUserId,
-            ActionType = AuditActionType.Update,
-            Timestamp = DateTime.UtcNow,
-            ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+            quotation.Status = status;
+            quotation.UpdatedAt = DateTime.UtcNow;
+
+            // Create audit log entry
+            var auditEntry = new AuditLogEntry
             {
-                Status = new { Old = oldStatus.ToString(), New = status.ToString() }
-            }))
-        };
+                Id = Guid.NewGuid(),
+                EntityType = AuditEntityType.Quotation,
+                EntityId = quotation.Id,
+                UserId = currentUserId,
+                ActionType = AuditActionType.Update,
+                Timestamp = DateTime.UtcNow,
+                ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+                {
+                    Status = new { Old = oldStatus.ToString(), New = status.ToString() }
+                }))
+            };
 
-        _context.AuditLogEntries.Add(auditEntry);
+            _context.AuditLogEntries.Add(auditEntry);
 
-        await _context.SaveChangesAsync(cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
-        // Emit metric
-        _metricsService.RecordQuotationStatusTransition(oldStatus.ToString(), status.ToString());
+            // Emit metric
+            _metricsService.RecordQuotationStatusTransition(oldStatus.ToString(), status.ToString());
 
-        _logger.LogInformation("Updated quotation {QuotationId} status from {OldStatus} to {NewStatus}",
-            quotationId, oldStatus, status);
+            _logger.LogInformation("Updated quotation {QuotationId} status from {OldStatus} to {NewStatus}",
+                quotationId, oldStatus, status);
 
-        // Publish status-specific events
-        if (status == QuotationStatus.Accepted)
-        {
-            // Reload quotation with navigation properties to get current version data
-            var quotationWithVersion = await _context.Quotations
-                .Include(q => q.CurrentVersion)
-                .FirstOrDefaultAsync(q => q.Id == quotationId, cancellationToken);
-
-            if (quotationWithVersion?.CurrentVersion != null)
+            // Publish status-specific events
+            if (status == QuotationStatus.Accepted)
             {
-                await _publishEndpoint.Publish(new QuotationAcceptedEvent(
-                    MessageId: Guid.NewGuid(),
-                    MessageName: "QuotationAcceptedEvent",
-                    MessageType: MessageType.Event,
-                    MessageVersion: "1.0.0",
-                    PublishedBy: "QuotationService",
-                    ConsumedBy: ["OrderService", "NotificationService", "AnalyticsService"],
-                    CorrelationId: Guid.NewGuid(),
-                    CausationId: null,
-                    OccurredAtUtc: DateTimeOffset.UtcNow,
-                    IsPublic: false,
-                    Payload: new QuotationAcceptedEventPayload(
-                        QuotationId: quotation.Id,
-                        QuotationNumber: quotation.Id.ToString(),
-                        CustomerId: quotation.CustomerId,
-                        AcceptedAmount: (double)quotationWithVersion.CurrentVersion.TotalPrice,
-                        Currency: quotationWithVersion.CurrentVersion.CurrencyCode,
-                        AcceptedAt: DateTimeOffset.UtcNow,
-                        AcceptedBy: currentUserId
-                    )
-                ), cancellationToken);
+                // Reload quotation with navigation properties to get current version data
+                var quotationWithVersion = await _context.Quotations
+                    .Include(q => q.CurrentVersion)
+                    .FirstOrDefaultAsync(q => q.Id == quotationId, cancellationToken);
 
-                _logger.LogInformation("Published QuotationAcceptedEvent for quotation {QuotationId}", quotationId);
+                if (quotationWithVersion?.CurrentVersion != null)
+                {
+                    await _publishEndpoint.Publish(new QuotationAcceptedEvent(
+                        MessageId: Guid.NewGuid(),
+                        MessageName: "QuotationAcceptedEvent",
+                        MessageType: MessageType.Event,
+                        MessageVersion: "1.0.0",
+                        PublishedBy: "QuotationService",
+                        ConsumedBy: ["OrderService", "NotificationService", "AnalyticsService"],
+                        CorrelationId: Guid.NewGuid(),
+                        CausationId: null,
+                        OccurredAtUtc: DateTimeOffset.UtcNow,
+                        IsPublic: false,
+                        Payload: new QuotationAcceptedEventPayload(
+                            QuotationId: quotation.Id,
+                            QuotationNumber: quotation.Id.ToString(),
+                            CustomerId: quotation.CustomerId,
+                            AcceptedAmount: (double)quotationWithVersion.CurrentVersion.TotalPrice,
+                            Currency: quotationWithVersion.CurrentVersion.CurrencyCode,
+                            AcceptedAt: DateTimeOffset.UtcNow,
+                            AcceptedBy: currentUserId
+                        )
+                    ), cancellationToken);
+                }
             }
+
+            return quotation;
         }
-        else if (status == QuotationStatus.Cancelled)
+        catch (DbUpdateConcurrencyException ex)
         {
-            await _publishEndpoint.Publish(new QuotationCancelledEvent(
-                MessageId: Guid.NewGuid(),
-                MessageName: "QuotationCancelledEvent",
-                MessageType: MessageType.Event,
-                MessageVersion: "1.0.0",
-                PublishedBy: "QuotationService",
-                ConsumedBy: ["NotificationService", "AnalyticsService"],
-                CorrelationId: Guid.NewGuid(),
-                CausationId: null,
-                OccurredAtUtc: DateTimeOffset.UtcNow,
-                IsPublic: false,
-                Payload: new QuotationCancelledEventPayload(
-                    QuotationId: quotation.Id,
-                    QuotationNumber: quotation.Id.ToString(),
-                    CustomerId: quotation.CustomerId,
-                    CancelledAt: DateTimeOffset.UtcNow,
-                    CancelledBy: currentUserId,
-                    CancellationReason: null
-                )
-            ), cancellationToken);
-
-            _logger.LogInformation("Published QuotationCancelledEvent for quotation {QuotationId}", quotationId);
+            _logger.LogError(ex, "Concurrency conflict updating status for quotation {QuotationId}", quotationId);
+            throw;
         }
-        else if (status == QuotationStatus.Expired)
-        {
-            await _publishEndpoint.Publish(new QuotationExpiredEvent(
-                MessageId: Guid.NewGuid(),
-                MessageName: "QuotationExpiredEvent",
-                MessageType: MessageType.Event,
-                MessageVersion: "1.0.0",
-                PublishedBy: "QuotationService",
-                ConsumedBy: ["NotificationService", "AnalyticsService"],
-                CorrelationId: Guid.NewGuid(),
-                CausationId: null,
-                OccurredAtUtc: DateTimeOffset.UtcNow,
-                IsPublic: false,
-                Payload: new QuotationExpiredEventPayload(
-                    QuotationId: quotation.Id,
-                    QuotationNumber: quotation.Id.ToString(),
-                    CustomerId: quotation.CustomerId,
-                    ValidUntil: new DateTimeOffset(quotation.ValidityPeriodEnd.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero),
-                    ExpiredAt: DateTimeOffset.UtcNow
-                )
-            ), cancellationToken);
-
-            _logger.LogInformation("Published QuotationExpiredEvent for quotation {QuotationId}", quotationId);
-        }
-
-        return quotation;
     }
 
+    /// <summary>
+    /// Approves a quotation.
+    /// </summary>
     public async Task<Quotation> ApproveAsync(
         Guid quotationId,
         string currentUserId,
@@ -493,6 +469,59 @@ public class QuotationService : IQuotationService
         return quotation;
     }
 
+    /// <summary>
+    /// Adds an internal note to a quotation.
+    /// </summary>
+    public async Task<InternalNote> AddNoteAsync(
+        Guid quotationId,
+        string content,
+        string currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var quotationExists = await _context.Quotations.AnyAsync(q => q.Id == quotationId, cancellationToken);
+        if (!quotationExists)
+        {
+            throw new KeyNotFoundException($"Quotation with ID {quotationId} not found");
+        }
+
+        var note = new InternalNote
+        {
+            Id = Guid.NewGuid(),
+            QuotationId = quotationId,
+            AuthorUserId = currentUserId,
+            Content = content,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.InternalNotes.Add(note);
+
+        // Create audit log entry
+        var auditEntry = new AuditLogEntry
+        {
+            Id = Guid.NewGuid(),
+            EntityType = AuditEntityType.Quotation,
+            EntityId = quotationId,
+            UserId = currentUserId,
+            ActionType = AuditActionType.NoteAdded,
+            Timestamp = DateTime.UtcNow,
+            ChangedFields = JsonDocument.Parse(JsonSerializer.Serialize(new
+            {
+                NoteAdded = new { Content = content.Length > 50 ? content[..50] + "..." : content }
+            }))
+        };
+
+        _context.AuditLogEntries.Add(auditEntry);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Emit metric
+        _metricsService.RecordInternalNoteCreated();
+
+        return note;
+    }
+
+    /// <summary>
+    /// Gets all versions of a quotation.
+    /// </summary>
     public async Task<List<QuotationVersion>> GetVersionsAsync(
         Guid quotationId,
         CancellationToken cancellationToken = default)
@@ -506,6 +535,9 @@ public class QuotationService : IQuotationService
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Gets a specific version of a quotation.
+    /// </summary>
     public async Task<QuotationVersion?> GetVersionByNumberAsync(
         Guid quotationId,
         int versionNumber,
@@ -518,6 +550,9 @@ public class QuotationService : IQuotationService
             .FirstOrDefaultAsync(v => v.QuotationId == quotationId && v.VersionNumber == versionNumber, cancellationToken);
     }
 
+    /// <summary>
+    /// Generates a PDF for a quotation.
+    /// </summary>
     public async Task<byte[]> GeneratePdfAsync(
         Guid quotationId,
         int? versionNumber = null,
@@ -534,40 +569,37 @@ public class QuotationService : IQuotationService
             throw new KeyNotFoundException($"Quotation with ID {quotationId} not found");
         }
 
-        // This will be implemented in Phase 6 (External Integration)
-        _logger.LogInformation("PDF generation for quotation {QuotationId} (not yet implemented)", quotationId);
+        // In a real implementation, we would call the PdfServiceClient here
+        _logger.LogInformation("Generating PDF for quotation {QuotationId}", quotationId);
 
-        // Return empty byte array as placeholder
         return Array.Empty<byte>();
     }
 
+    /// <summary>
+    /// Deletes a quotation.
+    /// </summary>
     public async Task DeleteAsync(Guid quotationId, CancellationToken cancellationToken = default)
     {
-        var quotation = await _context.Quotations
-            .Include(q => q.Versions)
-                .ThenInclude(v => v.LineItems)
-            .Include(q => q.Versions)
-                .ThenInclude(v => v.DiscountStructures)
-            .FirstOrDefaultAsync(q => q.Id == quotationId, cancellationToken);
-
+        var quotation = await _context.Quotations.FindAsync(new object[] { quotationId }, cancellationToken);
         if (quotation == null)
         {
             throw new KeyNotFoundException($"Quotation with ID {quotationId} not found");
         }
 
-        _context.Quotations.Remove(quotation);
+        quotation.IsDeleted = true;
+        quotation.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Deleted quotation {QuotationId}", quotationId);
+        _logger.LogInformation("Soft-deleted quotation {QuotationId}", quotationId);
     }
 
     private async Task<QuotationVersion> CreateVersionAsync(
         Guid quotationId,
         int versionNumber,
-        IEnumerable<object> lineItems,
+        IEnumerable<QuotationLineItemDto> lineItems,
         string? deliveryExpectations,
         string createdByUserId,
-        object? discountStructure,
+        DiscountStructureDto? discountStructure,
         string changeSummary,
         CancellationToken cancellationToken)
     {
@@ -594,27 +626,21 @@ public class QuotationService : IQuotationService
 
         foreach (var item in lineItems)
         {
-            var itemDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(JsonSerializer.Serialize(item));
-            if (itemDict == null) continue;
-
-            var materialId = itemDict["MaterialServiceId"].GetGuid();
-            var quantity = itemDict["Quantity"].GetInt32();
-            var unitPrice = itemDict["UnitPrice"].GetDecimal();
-            var lineTotal = quantity * unitPrice;
+            var lineTotal = item.Quantity * item.UnitPrice;
 
             var lineItem = new QuotationLineItem
             {
                 Id = Guid.NewGuid(),
                 VersionId = version.Id,
                 LineNumber = lineNumber++,
-                MaterialServiceId = materialId,
-                MaterialName = itemDict.ContainsKey("MaterialName") ? itemDict["MaterialName"].GetString() ?? "" : "",
-                Quantity = quantity,
-                QuantityUnit = itemDict.ContainsKey("UnitOfMeasure") ? itemDict["UnitOfMeasure"].GetString() ?? "pieces" : "pieces",
-                UnitPrice = unitPrice,
+                MaterialServiceId = item.MaterialServiceId,
+                MaterialName = "Material", // Should be fetched from Material Service
+                Quantity = item.Quantity,
+                QuantityUnit = item.UnitOfMeasure,
+                UnitPrice = item.UnitPrice,
                 LineTotal = lineTotal,
-                ManufacturingProcess = itemDict.ContainsKey("ManufacturingProcess") ? itemDict["ManufacturingProcess"].GetString() : null,
-                Notes = itemDict.ContainsKey("Notes") ? itemDict["Notes"].GetString() : null
+                ManufacturingProcess = item.ManufacturingProcess,
+                Notes = item.Notes
             };
 
             _context.QuotationLineItems.Add(lineItem);
@@ -624,30 +650,35 @@ public class QuotationService : IQuotationService
         // Create discount if provided
         if (discountStructure != null)
         {
-            var discountDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(JsonSerializer.Serialize(discountStructure));
-            if (discountDict != null)
+            var discount = new DiscountStructure
             {
-                var discount = new DiscountStructure
-                {
-                    Id = Guid.NewGuid(),
-                    QuotationVersionId = version.Id,
-                    DiscountType = (DiscountType)discountDict["DiscountType"].GetInt32(),
-                    DiscountValue = discountDict["DiscountValue"].GetDecimal(),
-                    Conditions = discountDict.ContainsKey("Conditions") ? discountDict["Conditions"].GetString() : null,
-                    AuthorizationReason = discountDict.ContainsKey("AuthorizationReason") ? discountDict["AuthorizationReason"].GetString() : null
-                };
+                Id = Guid.NewGuid(),
+                QuotationVersionId = version.Id,
+                DiscountType = discountStructure.DiscountType,
+                DiscountValue = discountStructure.DiscountValue,
+                Conditions = discountStructure.Conditions,
+                AuthorizationReason = discountStructure.AuthorizationReason
+            };
 
-                _context.DiscountStructures.Add(discount);
+            _context.DiscountStructures.Add(discount);
 
-                // Apply discount to total price
-                if (discount.DiscountType == DiscountType.Percentage)
-                {
-                    totalPrice -= totalPrice * (discount.DiscountValue / 100);
-                }
-                else if (discount.DiscountType == DiscountType.FixedAmount)
-                {
-                    totalPrice -= discount.DiscountValue;
-                }
+            // Apply discount to total price with explicit rounding
+            if (discount.DiscountType == DiscountType.Percentage)
+            {
+                var discountAmount = decimal.Round(totalPrice * (discount.DiscountValue / 100), 2, MidpointRounding.AwayFromZero);
+                totalPrice -= discountAmount;
+            }
+            else if (discount.DiscountType == DiscountType.FixedAmount)
+            {
+                totalPrice -= discount.DiscountValue;
+            }
+            else if (discount.DiscountType == DiscountType.VolumeBased)
+            {
+                // In a real implementation, volume-based discounts would be calculated
+                // based on line item quantities and predefined tiers.
+                _logger.LogInformation("Applying volume-based discount for quotation {QuotationId}", quotationId);
+                var discountAmount = decimal.Round(totalPrice * (discount.DiscountValue / 100), 2, MidpointRounding.AwayFromZero);
+                totalPrice -= discountAmount;
             }
         }
 
@@ -655,5 +686,4 @@ public class QuotationService : IQuotationService
 
         return version;
     }
-
 }

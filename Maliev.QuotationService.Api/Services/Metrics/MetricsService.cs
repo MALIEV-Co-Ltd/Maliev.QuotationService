@@ -8,7 +8,6 @@ namespace Maliev.QuotationService.Api.Services.Metrics;
 public class MetricsService : IDisposable
 {
     private readonly Meter _meter;
-    private readonly string _serviceName = "quotation-service";
 
     // RFQ Metrics
     private readonly Counter<long> _rfqCreated;
@@ -25,7 +24,7 @@ public class MetricsService : IDisposable
 
     public MetricsService()
     {
-        _meter = new Meter(_serviceName, "1.0.0");
+        _meter = new Meter("quotations-meter", "1.0.0");
 
         _rfqCreated = _meter.CreateCounter<long>(
             "quotation_service_rfq_created_total",
