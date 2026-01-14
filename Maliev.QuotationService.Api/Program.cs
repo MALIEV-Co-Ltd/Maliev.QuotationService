@@ -1,3 +1,4 @@
+#pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates
 using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Maliev.QuotationService.Api.Configuration.Extensions;
