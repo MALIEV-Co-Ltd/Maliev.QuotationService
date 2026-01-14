@@ -1,4 +1,3 @@
-#pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates
 using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Maliev.QuotationService.Api.Configuration.Extensions;
@@ -15,7 +14,7 @@ var bootstrapLogger = loggerFactory.CreateLogger("Program");
 
 try
 {
-    bootstrapLogger.LogInformation("Starting Quotation Service host");
+    Log.StartingHost(bootstrapLogger, "Quotation Service");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -95,7 +94,7 @@ try
     });
 
     var app = builder.Build();
-    var logger = app.Services.GetRequiredService<ILogger<Maliev.QuotationService.Api.Program>>();
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
     await app.MigrateDatabaseAsync<QuotationDbContext>();
 
@@ -121,12 +120,12 @@ try
     // Map OpenAPI and Scalar documentation (dev/staging only)
     app.MapApiDocumentation(servicePrefix: "quotation");
 
-    logger.LogInformation("QuotationService started successfully");
+    Log.ServiceStarted(logger, "Quotation Service");
     await app.RunAsync();
 }
 catch (Exception ex)
 {
-    bootstrapLogger.LogCritical(ex, "Quotation Service host terminated unexpectedly during startup");
+    Log.HostTerminated(bootstrapLogger, ex, "Quotation Service");
     throw;
 }
 finally
@@ -137,17 +136,20 @@ finally
 /// <summary>
 /// Main program class for the application
 /// </summary>
-namespace Maliev.QuotationService.Api
+public partial class Program
 {
-    public partial class Program
+    internal static partial class Log
     {
-        internal static partial class Log
-        {
-            [LoggerMessage(Level = LogLevel.Information, Message = "QuotationService started successfully")]
-            public static partial void ServiceStarted(ILogger logger);
+        [LoggerMessage(Level = LogLevel.Information, Message = "Starting {ServiceName} host")]
+        public static partial void StartingHost(ILogger logger, string serviceName);
 
-            [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
-            public static partial void MigrationFailed(ILogger logger, Exception exception);
-        }
+        [LoggerMessage(Level = LogLevel.Critical, Message = "{ServiceName} host terminated unexpectedly during startup")]
+        public static partial void HostTerminated(ILogger logger, Exception ex, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "{ServiceName} started successfully")]
+        public static partial void ServiceStarted(ILogger logger, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
+        public static partial void MigrationFailed(ILogger logger, Exception exception);
     }
 }
