@@ -61,7 +61,7 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         // but current factory takes Dictionary<string, string> which limits to one value per key.
         // I need to update the factory to support multiple claims of same type.
 
-        var token = Factory.CreateTestJwtToken(userId, effectiveRoles, claims.Values.Select(v => new System.Security.Claims.Claim("permissions", v)).ToList());
+        var token = Factory.CreateTestJwtToken(userId, effectiveRoles, permissions.Distinct().ToArray());
         var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;

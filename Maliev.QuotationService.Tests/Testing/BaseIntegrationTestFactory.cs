@@ -348,7 +348,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         {
             try
             {
+#pragma warning disable EF1002
                 await context.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE \"{tableName}\" RESTART IDENTITY CASCADE");
+#pragma warning restore EF1002
             }
             catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01")
             {
@@ -390,11 +392,13 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     /// </summary>
     /// <param name="userId">User ID to include in token</param>
     /// <param name="roles">Roles to include in token claims</param>
+    /// <param name="permissions">Permissions to include in token claims</param>
     /// <param name="additionalClaims">Additional claims to include</param>
     /// <returns>JWT token string</returns>
     public string CreateTestJwtToken(
         string userId = "test-user",
         string[]? roles = null,
+        string[]? permissions = null,
         IEnumerable<Claim>? additionalClaims = null)
     {
         var claims = new List<Claim>
@@ -410,7 +414,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
 
             // Map predefined roles to their permissions for the JWT
             var predefinedRole = QuotationPredefinedRoles.All.FirstOrDefault(r => r.RoleId == role);
-            if (predefinedRole?.Permissions != null)
+            if (!string.IsNullOrEmpty(predefinedRole.RoleId) && predefinedRole.Permissions != null)
             {
                 foreach (var permission in predefinedRole.Permissions)
                 {
@@ -419,6 +423,13 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             }
         }
 
+        if (permissions != null)
+        {
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim("permissions", permission));
+            }
+        }
 
         if (additionalClaims != null)
         {
@@ -459,18 +470,15 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         Dictionary<string, string>? additionalClaims)
     {
         var claims = additionalClaims?.Select(kv => new Claim(kv.Key, kv.Value));
-        return CreateTestJwtToken(userId, roles, claims);
+        return CreateTestJwtToken(userId, roles, null, claims);
     }
 
     /// <summary>
-    /// Creates an HTTP client with authenticated user and specified roles.
+    /// Creates an HTTP client with authenticated user and specified roles and permissions.
     /// </summary>
-    /// <param name="userId">User ID for the token</param>
-    /// <param name="roles">User roles</param>
-    /// <returns>HttpClient with Authorization header set</returns>
-    public HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null)
+    public HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null, string[]? permissions = null)
     {
-        var token = CreateTestJwtToken(userId, roles);
+        var token = CreateTestJwtToken(userId, roles, permissions);
         var client = CreateClient();
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
         return client;
