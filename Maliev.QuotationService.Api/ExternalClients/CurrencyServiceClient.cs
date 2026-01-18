@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 
 namespace Maliev.QuotationService.Api.ExternalClients;

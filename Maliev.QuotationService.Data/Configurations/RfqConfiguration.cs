@@ -1,8 +1,6 @@
-using System.Text.Json;
 using Maliev.QuotationService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Maliev.QuotationService.Data.Configurations;
 

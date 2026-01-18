@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
+using System.Security.Claims;
 
 namespace Maliev.QuotationService.Api.Middleware;
 

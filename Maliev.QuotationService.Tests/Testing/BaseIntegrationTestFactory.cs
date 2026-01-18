@@ -17,7 +17,10 @@ using Testcontainers.RabbitMq;
 using Testcontainers.Redis;
 using Xunit;
 
+using Maliev.QuotationService.Api.Services.IAM;
+
 namespace Maliev.QuotationService.Tests.Testing;
+
 
 /// <summary>
 /// Base integration test factory for QuotationService.
@@ -352,7 +355,18 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         foreach (var role in effectiveRoles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
+
+            // Map predefined roles to their permissions for the JWT
+            var predefinedRole = QuotationPredefinedRoles.All.FirstOrDefault(r => r.RoleId == role);
+            if (predefinedRole.Permissions != null)
+            {
+                foreach (var permission in predefinedRole.Permissions)
+                {
+                    claims.Add(new Claim("permissions", permission));
+                }
+            }
         }
+
 
         if (additionalClaims != null)
         {

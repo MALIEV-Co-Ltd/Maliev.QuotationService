@@ -1,8 +1,6 @@
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Data;
-using Maliev.QuotationService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace Maliev.QuotationService.Api.Services;
 

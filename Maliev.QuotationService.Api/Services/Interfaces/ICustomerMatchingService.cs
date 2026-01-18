@@ -1,5 +1,3 @@
-using Maliev.QuotationService.Data.Entities;
-
 namespace Maliev.QuotationService.Api.Services.Interfaces;
 
 /// <summary>
