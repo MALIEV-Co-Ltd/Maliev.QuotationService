@@ -1,12 +1,9 @@
-using System.Threading.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using Maliev.QuotationService.Api.Configuration.Extensions;
 using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
-using Maliev.Aspire.ServiceDefaults;
-using Maliev.Aspire.ServiceDefaults.Authorization;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+using System.Threading.RateLimiting;
 
 // Initialize bootstrap logging
 using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
@@ -75,25 +72,10 @@ try
     builder.Services.AddSingleton<MetricsService>();
 
     // Add rate limiting
-    builder.Services.AddRateLimiter(options =>
-    {
-        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-            RateLimitPartition.GetFixedWindowLimiter(
-                partitionKey: context.User.Identity?.Name ?? context.Request.Headers.Host.ToString(),
-                factory: _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = 100,
-                    Window = TimeSpan.FromMinutes(1)
-                }));
-
-        options.OnRejected = async (context, token) =>
-        {
-            context.HttpContext.Response.StatusCode = 429;
-            await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", cancellationToken: token);
-        };
-    });
+    builder.Services.AddRateLimiting();
 
     var app = builder.Build();
+
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
     await app.MigrateDatabaseAsync<QuotationDbContext>();

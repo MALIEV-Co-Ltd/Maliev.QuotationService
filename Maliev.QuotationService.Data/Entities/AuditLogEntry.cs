@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Maliev.QuotationService.Data.Enums;
+using System.Text.Json;
 
 namespace Maliev.QuotationService.Data.Entities;
 

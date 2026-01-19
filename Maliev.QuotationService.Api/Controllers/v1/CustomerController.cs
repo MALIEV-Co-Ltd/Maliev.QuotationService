@@ -1,6 +1,4 @@
 using Asp.Versioning;
-using Maliev.QuotationService.Api.DTOs.Requests;
-using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;

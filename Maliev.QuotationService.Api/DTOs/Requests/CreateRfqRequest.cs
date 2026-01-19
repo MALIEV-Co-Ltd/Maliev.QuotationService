@@ -1,5 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using Maliev.QuotationService.Data.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace Maliev.QuotationService.Api.DTOs.Requests;
 
