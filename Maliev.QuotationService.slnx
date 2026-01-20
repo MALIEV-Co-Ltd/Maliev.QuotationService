@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Maliev.QuotationService.Api/Maliev.QuotationService.Api.csproj" />
+  <Project Path="Maliev.QuotationService.Data/Maliev.QuotationService.Data.csproj" />
+  <Project Path="Maliev.QuotationService.Tests/Maliev.QuotationService.Tests.csproj" />
+</Solution>
