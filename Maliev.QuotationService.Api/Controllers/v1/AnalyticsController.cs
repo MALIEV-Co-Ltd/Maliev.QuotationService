@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Maliev.Aspire.ServiceDefaults;
 using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Data.Enums;
@@ -12,7 +13,7 @@ namespace Maliev.QuotationService.Api.Controllers.v1;
 [ApiVersion("1.0")]
 [Route("quotation/v{version:apiVersion}/analytics")]
 [Authorize]
-[EnableRateLimiting("batch")]
+[EnableRateLimiting(RateLimitPolicies.Batch)]
 public class AnalyticsController : ControllerBase
 {
     private readonly IAnalyticsService _analyticsService;
