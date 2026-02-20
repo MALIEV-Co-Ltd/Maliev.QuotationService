@@ -44,6 +44,7 @@ public class QuotationService : IQuotationService
         IEnumerable<QuotationLineItemDto> lineItems,
         string? deliveryExpectations,
         string currentUserId,
+        Data.Enums.BillingIdentityType billingIdentityType = Data.Enums.BillingIdentityType.Corporate,
         DiscountStructureDto? discountStructure = null,
         CancellationToken cancellationToken = default)
     {
@@ -79,6 +80,7 @@ public class QuotationService : IQuotationService
                     CustomerId = customerId,
                     SourceRfqId = sourceRfqId,
                     Status = QuotationStatus.Draft,
+                    BillingIdentityType = billingIdentityType,
                     ValidityPeriodStart = DateOnly.FromDateTime(validityPeriodStart),
                     ValidityPeriodEnd = DateOnly.FromDateTime(validityPeriodEnd),
                     CreatedAt = DateTime.UtcNow,

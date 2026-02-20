@@ -68,6 +68,7 @@ public class QuotationController : ControllerBase
                 lineItems: request.LineItems,
                 deliveryExpectations: request.DeliveryExpectations,
                 currentUserId: currentUserId,
+                billingIdentityType: (Data.Enums.BillingIdentityType)(int)request.BillingIdentityType,
                 discountStructure: request.DiscountStructure,
                 cancellationToken: cancellationToken);
 

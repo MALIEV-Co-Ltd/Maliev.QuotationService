@@ -9,6 +9,12 @@ public class Quotation
     public Guid? SourceRfqId { get; set; }
     public Guid? CurrentVersionId { get; set; }
     public QuotationStatus Status { get; set; }
+
+    /// <summary>
+    /// Billing identity type (Personal or Corporate) selected for this quotation.
+    /// Determines whether customer's Thai National ID or company tax ID is used on documents.
+    /// </summary>
+    public BillingIdentityType BillingIdentityType { get; set; } = BillingIdentityType.Corporate;
     public DateOnly ValidityPeriodStart { get; set; }
     public DateOnly ValidityPeriodEnd { get; set; }
     public DateTime CreatedAt { get; set; }

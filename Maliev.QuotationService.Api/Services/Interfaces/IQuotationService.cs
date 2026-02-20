@@ -20,6 +20,7 @@ public interface IQuotationService
         IEnumerable<QuotationLineItemDto> lineItems,
         string? deliveryExpectations,
         string currentUserId,
+        BillingIdentityType billingIdentityType = BillingIdentityType.Corporate,
         DiscountStructureDto? discountStructure = null,
         CancellationToken cancellationToken = default);
 

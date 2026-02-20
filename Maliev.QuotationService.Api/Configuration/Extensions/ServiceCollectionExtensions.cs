@@ -39,6 +39,9 @@ public static class ServiceCollectionExtensions
         services.AddServiceClient<IPdfServiceClient, PdfServiceClient>(configuration, "PdfService")
             .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
 
+        services.AddServiceClient<ICustomerServiceClient, CustomerServiceClient>(configuration, "CustomerService")
+            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+
         return services;
     }
 }
