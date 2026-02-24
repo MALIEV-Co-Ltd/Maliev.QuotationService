@@ -5,6 +5,7 @@ using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
 using Maliev.QuotationService.Data.Enums;
+using Maliev.MessagingContracts.Contracts.Quotations;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;

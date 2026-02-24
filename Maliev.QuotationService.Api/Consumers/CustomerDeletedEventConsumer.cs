@@ -1,5 +1,5 @@
-using Maliev.MessagingContracts.Generated;
 using Maliev.QuotationService.Data;
+using Maliev.MessagingContracts.Contracts.Customers;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,7 +38,7 @@ public class CustomerDeletedEventConsumer : IConsumer<CustomerDeletedEvent>
 
         customer.IsDeleted = true;
         customer.DeletedAt = payload.DeletedAt.UtcDateTime;
-        customer.UpdatedAt = DateTime.UtcNow;
+        customer.UpdatedAt = payload.DeletedAt.UtcDateTime;
 
         await _dbContext.SaveChangesAsync();
 

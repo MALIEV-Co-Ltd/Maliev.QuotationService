@@ -1,6 +1,7 @@
 using Maliev.MessagingContracts.Generated;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Entities;
+using Maliev.MessagingContracts.Contracts.Customers;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,7 +46,7 @@ public class CustomerCreatedEventConsumer : IConsumer<CustomerCreatedEvent>
                 Email = payload.Email,
                 PhoneNumber = payload.Mobile ?? payload.Landline,
                 CreatedAt = payload.CreatedAt.UtcDateTime,
-                UpdatedAt = DateTime.UtcNow,
+                UpdatedAt = payload.CreatedAt.UtcDateTime,
                 IsDeleted = false
             };
 
@@ -61,7 +62,7 @@ public class CustomerCreatedEventConsumer : IConsumer<CustomerCreatedEvent>
         customer.Name = $"{payload.FirstName} {payload.LastName}".Trim();
         customer.Email = payload.Email;
         customer.PhoneNumber = payload.Mobile ?? payload.Landline;
-        customer.UpdatedAt = DateTime.UtcNow;
+        customer.UpdatedAt = payload.CreatedAt.UtcDateTime;
         customer.IsDeleted = false;
         customer.DeletedAt = null;
     }

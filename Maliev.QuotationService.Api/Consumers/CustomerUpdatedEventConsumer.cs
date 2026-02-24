@@ -1,5 +1,5 @@
-using Maliev.MessagingContracts.Generated;
 using Maliev.QuotationService.Data;
+using Maliev.MessagingContracts.Contracts.Customers;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -43,37 +43,20 @@ public class CustomerUpdatedEventConsumer : IConsumer<CustomerUpdatedEvent>
         {
             var fields = JsonSerializer.SerializeToElement(payload.UpdatedFields);
 
-            bool nameChanged = false;
-            string firstName = "";
-            string lastName = "";
+            bool hasFirstName = fields.TryGetProperty("FirstName", out var fn);
+            bool hasLastName = fields.TryGetProperty("LastName", out var ln);
 
-            if (fields.TryGetProperty("FirstName", out var fn))
+            if (hasFirstName || hasLastName)
             {
-                firstName = fn.GetString() ?? "";
-                nameChanged = true;
-            }
-            if (fields.TryGetProperty("LastName", out var ln))
-            {
-                lastName = ln.GetString() ?? "";
-                nameChanged = true;
-            }
+                // We parse the existing name to preserve the unchanged portion.
+                var existingParts = (customer.Name ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                var existingFirstName = existingParts.Length > 0 ? existingParts[0] : "";
+                var existingLastName = existingParts.Length > 1 ? existingParts[1] : "";
 
-            if (nameChanged)
-            {
-                // If only one changed, we might lose the other.
-                // However, in our simplified Customer model in QuotationService,
-                // we only have 'Name'.
-                if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
-                {
-                    // If we only have one part, try to keep the existing parts if possible
-                    // This is a bit complex without storing FirstName/LastName separately.
-                    // For now, let's just apply what we have.
-                    customer.Name = $"{firstName} {lastName}".Trim();
-                }
-                else
-                {
-                    customer.Name = $"{firstName} {lastName}".Trim();
-                }
+                var finalFirstName = hasFirstName ? (fn.GetString() ?? "") : existingFirstName;
+                var finalLastName = hasLastName ? (ln.GetString() ?? "") : existingLastName;
+
+                customer.Name = $"{finalFirstName} {finalLastName}".Trim();
             }
 
             if (fields.TryGetProperty("Email", out var email))
