@@ -211,6 +211,7 @@ public class QuotationService : IQuotationService
     {
         var query = _context.Quotations
             .Include(q => q.Customer)
+            .Include(q => q.CurrentVersion)
             .AsQueryable();
 
         // Apply filters

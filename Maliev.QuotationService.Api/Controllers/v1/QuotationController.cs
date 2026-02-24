@@ -7,6 +7,7 @@ using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -49,7 +50,7 @@ public class QuotationController : ControllerBase
     /// <response code="201">Quotation created successfully.</response>
     /// <response code="403">If user lacks `quotation.quotations.create` permission.</response>
     [HttpPost]
-    [Authorize(Policy = QuotationPermissions.QuotationsCreate)]
+    [RequirePermission(QuotationPermissions.QuotationsCreate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<QuotationResponse>> CreateQuotation(
@@ -98,7 +99,7 @@ public class QuotationController : ControllerBase
     /// <response code="200">List of quotations found.</response>
     /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpGet]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(PagedResponse<QuotationResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResponse<QuotationResponse>>> GetQuotations(
         [FromQuery] QuotationStatus? status = null,
@@ -146,7 +147,7 @@ public class QuotationController : ControllerBase
     /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     /// <response code="404">Quotation not found.</response>
     [HttpGet("{id}")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<QuotationResponse>> GetQuotationById(
@@ -174,7 +175,7 @@ public class QuotationController : ControllerBase
     /// <response code="200">Updated successfully.</response>
     /// <response code="403">If user lacks `quotation.quotations.update` permission.</response>
     [HttpPut("{id}")]
-    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [RequirePermission(QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -221,7 +222,7 @@ public class QuotationController : ControllerBase
     /// <response code="200">Status updated.</response>
     /// <response code="403">If user lacks `quotation.quotations.update` permission.</response>
     [HttpPatch("{id}/status")]
-    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [RequirePermission(QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -270,7 +271,7 @@ public class QuotationController : ControllerBase
     /// <response code="200">Approved.</response>
     /// <response code="403">If user lacks `quotation.quotations.approve` permission.</response>
     [HttpPost("{id}/approve")]
-    [Authorize(Policy = QuotationPermissions.QuotationsApprove)]
+    [RequirePermission(QuotationPermissions.QuotationsApprove)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -313,7 +314,7 @@ public class QuotationController : ControllerBase
     /// <response code="201">Note added.</response>
     /// <response code="403">If user lacks `quotation.quotations.update` permission.</response>
     [HttpPost("{id}/notes")]
-    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [RequirePermission(QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(typeof(InternalNoteResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<InternalNoteResponse>> AddNoteToQuotation(
@@ -352,7 +353,7 @@ public class QuotationController : ControllerBase
     /// <response code="200">Versions found.</response>
     /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpGet("{id}/versions")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(List<QuotationVersionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<QuotationVersionResponse>>> GetQuotationVersions(
@@ -380,7 +381,7 @@ public class QuotationController : ControllerBase
     /// <response code="200">Version found.</response>
     /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpGet("{id}/versions/{versionNumber}")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(QuotationVersionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<QuotationVersionResponse>> GetQuotationVersion(
@@ -409,7 +410,7 @@ public class QuotationController : ControllerBase
     /// <response code="200">PDF file returned.</response>
     /// <response code="403">If user lacks `quotation.quotations.read` permission.</response>
     [HttpPost("{id}/pdf")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GeneratePdf(
@@ -438,7 +439,7 @@ public class QuotationController : ControllerBase
     /// <response code="204">Successfully deleted.</response>
     /// <response code="403">If user lacks `quotation.quotations.delete` permission.</response>
     [HttpDelete("{id}")]
-    [Authorize(Policy = QuotationPermissions.QuotationsDelete)]
+    [RequirePermission(QuotationPermissions.QuotationsDelete)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteQuotation(
@@ -464,7 +465,9 @@ public class QuotationController : ControllerBase
         return new QuotationResponse
         {
             Id = quotation.Id,
+            QuotationNumber = quotation.Id.ToString(),
             CustomerId = quotation.CustomerId,
+            CustomerName = quotation.Customer?.Name ?? "Unknown",
             Customer = quotation.Customer != null ? new CustomerDto
             {
                 Id = quotation.Customer.Id,
@@ -475,6 +478,7 @@ public class QuotationController : ControllerBase
             SourceRfqId = quotation.SourceRfqId,
             CurrentVersionNumber = currentVersion?.VersionNumber ?? 0,
             Status = quotation.Status,
+            Total = currentVersion?.TotalPrice ?? 0,
             ValidityPeriodStart = quotation.ValidityPeriodStart.ToDateTime(TimeOnly.MinValue),
             ValidityPeriodEnd = quotation.ValidityPeriodEnd.ToDateTime(TimeOnly.MinValue),
             CreatedAt = quotation.CreatedAt,

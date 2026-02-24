@@ -16,8 +16,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAnalyticsService, Maliev.QuotationService.Api.Services.AnalyticsService>();
 
         // IAM & Authorization
-        services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
-        services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddIAMRegistration<QuotationIAMRegistrationService>("quotation");
 
         return services;

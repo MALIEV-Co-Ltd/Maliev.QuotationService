@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -28,7 +29,7 @@ public class CustomerController : ControllerBase
     /// Gets potential customer matches based on contact information.
     /// </summary>
     [HttpPost("match")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     public async Task<ActionResult<IEnumerable<CustomerMatch>>> GetMatches(
         [FromBody] GetCustomerMatchesRequest request,
         CancellationToken cancellationToken)
@@ -43,7 +44,7 @@ public class CustomerController : ControllerBase
     /// Links a source customer to a target customer (merges records).
     /// </summary>
     [HttpPost("link")]
-    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [RequirePermission(QuotationPermissions.QuotationsUpdate)]
     public async Task<IActionResult> LinkCustomers(
         [FromBody] LinkCustomerRequest request,
         CancellationToken cancellationToken)
@@ -67,7 +68,7 @@ public class CustomerController : ControllerBase
     /// Unlinks a previously merged customer record.
     /// </summary>
     [HttpPost("unlink")]
-    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [RequirePermission(QuotationPermissions.QuotationsUpdate)]
     public async Task<IActionResult> UnlinkCustomers(
         [FromBody] LinkCustomerRequest request,
         CancellationToken cancellationToken)

@@ -4,6 +4,7 @@ using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -31,7 +32,7 @@ public class AnalyticsController : ControllerBase
     /// Gets RFQ to quotation conversion rates by channel.
     /// </summary>
     [HttpGet("conversion-rates")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     public async Task<ActionResult<IEnumerable<ConversionRateReport>>> GetConversionRates(
         [FromQuery] RfqChannel? channel = null,
         CancellationToken cancellationToken = default)
@@ -44,7 +45,7 @@ public class AnalyticsController : ControllerBase
     /// Gets average turnaround time from RFQ to quotation.
     /// </summary>
     [HttpGet("turnaround-time")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     public async Task<ActionResult<TurnaroundTimeReport>> GetTurnaroundTime(
         [FromQuery] DateTime? fromDate = null,
         [FromQuery] DateTime? toDate = null,
@@ -58,7 +59,7 @@ public class AnalyticsController : ControllerBase
     /// Gets a list of abandoned RFQs (not converted within threshold).
     /// </summary>
     [HttpGet("abandoned-rfqs")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     public async Task<ActionResult<IEnumerable<AbandonedRfqReport>>> GetAbandonedRfqs(
         [FromQuery] int thresholdDays = 30,
         CancellationToken cancellationToken = default)

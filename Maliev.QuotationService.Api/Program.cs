@@ -18,6 +18,12 @@ try
     // --- Secrets & Configuration ---
     builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if available
 
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        });
+
     // --- Infrastructure & Observability ---
     builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
     builder.AddStandardMiddleware(options =>
@@ -37,6 +43,9 @@ try
     {
         x.AddConsumer<Maliev.QuotationService.Api.Consumers.FileDeletedEventConsumer>();
         x.AddConsumer<Maliev.QuotationService.Api.Consumers.FileAnalyzedEventConsumer>();
+        x.AddConsumer<Maliev.QuotationService.Api.Consumers.CustomerCreatedEventConsumer>();
+        x.AddConsumer<Maliev.QuotationService.Api.Consumers.CustomerUpdatedEventConsumer>();
+        x.AddConsumer<Maliev.QuotationService.Api.Consumers.CustomerDeletedEventConsumer>();
     });
 
     // --- API Configuration ---

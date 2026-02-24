@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using Maliev.QuotationService.Api.Services.Interfaces;
+using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Data.Enums;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,6 +33,7 @@ public class MetricsController : ControllerBase
     /// Get the count of pending quotations.
     /// </summary>
     [HttpGet("pending-count")]
+    [RequirePermission(QuotationPermissions.QuotationsRead)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPendingCount(CancellationToken cancellationToken)
     {
