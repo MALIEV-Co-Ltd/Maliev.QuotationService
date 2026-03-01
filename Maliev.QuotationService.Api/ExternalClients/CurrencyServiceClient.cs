@@ -1,4 +1,5 @@
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Maliev.QuotationService.Api.ExternalClients;
 

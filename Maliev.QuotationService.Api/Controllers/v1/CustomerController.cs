@@ -1,7 +1,7 @@
 using Asp.Versioning;
-using Maliev.QuotationService.Api.Services.IAM;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+using Maliev.QuotationService.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -10,7 +10,6 @@ namespace Maliev.QuotationService.Api.Controllers.v1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("quotation/v{version:apiVersion}/customers")]
-[Authorize]
 public class CustomerController : ControllerBase
 {
     private readonly ICustomerMatchingService _matchingService;
@@ -28,7 +27,7 @@ public class CustomerController : ControllerBase
     /// Gets potential customer matches based on contact information.
     /// </summary>
     [HttpPost("match")]
-    [Authorize(Policy = QuotationPermissions.QuotationsRead)]
+    [RequirePermission(Permissions.CustomersRead)]
     public async Task<ActionResult<IEnumerable<CustomerMatch>>> GetMatches(
         [FromBody] GetCustomerMatchesRequest request,
         CancellationToken cancellationToken)
@@ -43,7 +42,7 @@ public class CustomerController : ControllerBase
     /// Links a source customer to a target customer (merges records).
     /// </summary>
     [HttpPost("link")]
-    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [RequirePermission(Permissions.CustomersUpdate)]
     public async Task<IActionResult> LinkCustomers(
         [FromBody] LinkCustomerRequest request,
         CancellationToken cancellationToken)
@@ -67,7 +66,7 @@ public class CustomerController : ControllerBase
     /// Unlinks a previously merged customer record.
     /// </summary>
     [HttpPost("unlink")]
-    [Authorize(Policy = QuotationPermissions.QuotationsUpdate)]
+    [RequirePermission(Permissions.CustomersUpdate)]
     public async Task<IActionResult> UnlinkCustomers(
         [FromBody] LinkCustomerRequest request,
         CancellationToken cancellationToken)

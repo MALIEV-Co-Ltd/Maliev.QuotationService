@@ -1,5 +1,7 @@
 <Solution>
   <Project Path="Maliev.QuotationService.Api/Maliev.QuotationService.Api.csproj" />
-  <Project Path="Maliev.QuotationService.Data/Maliev.QuotationService.Data.csproj" />
+  <Project Path="Maliev.QuotationService.Application/Maliev.QuotationService.Application.csproj" />
+  <Project Path="Maliev.QuotationService.Domain/Maliev.QuotationService.Domain.csproj" />
+  <Project Path="Maliev.QuotationService.Infrastructure/Maliev.QuotationService.Infrastructure.csproj" />
   <Project Path="Maliev.QuotationService.Tests/Maliev.QuotationService.Tests.csproj" />
 </Solution>

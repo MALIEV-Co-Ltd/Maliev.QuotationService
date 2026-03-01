@@ -1,5 +1,4 @@
 using Maliev.MessagingContracts.Contracts.Uploads;
-using Maliev.MessagingContracts;
 using Maliev.QuotationService.Data;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;

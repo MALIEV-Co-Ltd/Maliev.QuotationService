@@ -2,6 +2,7 @@ using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Data;
 using Maliev.QuotationService.Data.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Maliev.QuotationService.Api.Services;
 

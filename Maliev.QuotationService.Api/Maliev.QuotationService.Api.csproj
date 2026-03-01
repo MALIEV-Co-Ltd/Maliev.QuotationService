@@ -18,7 +18,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Maliev.QuotationService.Data\Maliev.QuotationService.Data.csproj" />
+    <ProjectReference Include="..\Maliev.QuotationService.Application\Maliev.QuotationService.Application.csproj" />
+    <ProjectReference Include="..\Maliev.QuotationService.Infrastructure\Maliev.QuotationService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="DTOs\**\*.cs" />
+    <Compile Remove="Services\**\*.cs" />
+    <Compile Remove="ExternalClients\**\*.cs" />
+    <Compile Remove="Consumers\**\*.cs" />
+    <Compile Remove="Middleware\**\*.cs" />
   </ItemGroup>
 
 </Project>
