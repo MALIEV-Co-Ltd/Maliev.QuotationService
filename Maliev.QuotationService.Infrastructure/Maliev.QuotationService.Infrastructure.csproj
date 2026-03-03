@@ -11,6 +11,13 @@
     <ProjectReference Include="..\Maliev.QuotationService.Domain\Maliev.QuotationService.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0-rc.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
   <ItemGroup Condition="'$(GITHUB_ACTIONS)' != 'true'">
     <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Maliev.MessagingContracts\generated\csharp\Maliev.MessagingContracts.csproj" />
@@ -23,18 +30,6 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\Maliev.QuotationService.Data\QuotationDbContext.cs" />
-    <Compile Include="..\Maliev.QuotationService.Data\QuotationDbContextFactory.cs" />
-    <Compile Include="..\Maliev.QuotationService.Data\Configurations\**\*.cs" />
-    <Compile Include="..\Maliev.QuotationService.Data\Migrations\**\*.cs" />
-    <Compile Include="..\Maliev.QuotationService.Api\Services\**\*.cs"
-             Exclude="..\Maliev.QuotationService.Api\Services\Interfaces\**\*.cs" />
-    <Compile Include="..\Maliev.QuotationService.Api\ExternalClients\**\*.cs" />
-    <Compile Include="..\Maliev.QuotationService.Api\Consumers\**\*.cs" />
-    <Compile Include="..\Maliev.QuotationService.Api\Middleware\**\*.cs" />
   </ItemGroup>
 
 </Project>

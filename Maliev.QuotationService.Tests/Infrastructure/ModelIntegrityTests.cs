@@ -1,4 +1,4 @@
-using Maliev.QuotationService.Data;
+using Maliev.QuotationService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -16,6 +16,6 @@ public class ModelIntegrityTests
         using var context = new QuotationDbContext(options);
         var hasChanges = context.Database.HasPendingModelChanges();
 
-        Assert.False(hasChanges, "Run 'dotnet ef migrations add <Name> --project Maliev.QuotationService.Data --startup-project Maliev.QuotationService.Api'");
+        Assert.False(hasChanges, "Run 'dotnet ef migrations add <Name> --project Maliev.QuotationService.Infrastructure --startup-project Maliev.QuotationService.Api'");
     }
 }

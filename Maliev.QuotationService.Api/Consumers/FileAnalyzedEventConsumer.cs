@@ -1,5 +1,6 @@
 using Maliev.MessagingContracts.Contracts.Geometry;
-using Maliev.QuotationService.Data;
+using Maliev.MessagingContracts;
+using Maliev.QuotationService.Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 

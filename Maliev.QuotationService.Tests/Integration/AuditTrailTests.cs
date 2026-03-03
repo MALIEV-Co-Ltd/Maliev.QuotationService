@@ -2,7 +2,7 @@ using System.Net.Http.Json;
 using Xunit;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Domain.Enums;
 using Maliev.QuotationService.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 

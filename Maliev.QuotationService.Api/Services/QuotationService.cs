@@ -1,10 +1,11 @@
 using Maliev.MessagingContracts.Contracts.Quotations;
+using Maliev.MessagingContracts;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
-using Maliev.QuotationService.Data;
-using Maliev.QuotationService.Data.Entities;
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Infrastructure.Persistence;
+using Maliev.QuotationService.Domain.Entities;
+using Maliev.QuotationService.Domain.Enums;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -44,7 +45,7 @@ public class QuotationService : IQuotationService
         IEnumerable<QuotationLineItemDto> lineItems,
         string? deliveryExpectations,
         string currentUserId,
-        Data.Enums.BillingIdentityType billingIdentityType = Data.Enums.BillingIdentityType.Corporate,
+        Domain.Enums.BillingIdentityType billingIdentityType = Domain.Enums.BillingIdentityType.Corporate,
         DiscountStructureDto? discountStructure = null,
         CancellationToken cancellationToken = default)
     {
@@ -151,7 +152,7 @@ public class QuotationService : IQuotationService
                 await _publishEndpoint.Publish(new QuotationCreatedEvent(
                     MessageId: Guid.NewGuid(),
                     MessageName: "QuotationCreatedEvent",
-                    MessageType: Maliev.MessagingContracts.MessageType.Event,
+                    MessageType: MessageType.Event,
                     MessageVersion: "1.0.0",
                     PublishedBy: "QuotationService",
                     ConsumedBy: ["NotificationService", "AnalyticsService"],
@@ -385,7 +386,7 @@ public class QuotationService : IQuotationService
                     await _publishEndpoint.Publish(new QuotationAcceptedEvent(
                         MessageId: Guid.NewGuid(),
                         MessageName: "QuotationAcceptedEvent",
-                        MessageType: Maliev.MessagingContracts.MessageType.Event,
+                        MessageType: MessageType.Event,
                         MessageVersion: "1.0.0",
                         PublishedBy: "QuotationService",
                         ConsumedBy: ["OrderService", "NotificationService", "AnalyticsService"],

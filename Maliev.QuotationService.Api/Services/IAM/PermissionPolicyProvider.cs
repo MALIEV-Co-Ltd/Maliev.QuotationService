@@ -21,25 +21,13 @@ public class PermissionPolicyProvider : IAuthorizationPolicyProvider
 
     public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {
-        var normalizedPermission = NormalizePermissionPolicy(policyName);
-        if (normalizedPermission.StartsWith("quotation.", StringComparison.OrdinalIgnoreCase))
+        if (policyName.StartsWith("quotation.", StringComparison.OrdinalIgnoreCase))
         {
             var policy = new AuthorizationPolicyBuilder();
-            policy.AddRequirements(new PermissionRequirement(normalizedPermission));
+            policy.AddRequirements(new PermissionRequirement(policyName));
             return Task.FromResult<AuthorizationPolicy?>(policy.Build());
         }
 
         return FallbackPolicyProvider.GetPolicyAsync(policyName);
-    }
-
-    private static string NormalizePermissionPolicy(string policyName)
-    {
-        if (policyName.StartsWith("Permission:", StringComparison.OrdinalIgnoreCase))
-        {
-            var rawPermission = policyName["Permission:".Length..];
-            return rawPermission.Split(':', 2, StringSplitOptions.TrimEntries)[0];
-        }
-
-        return policyName;
     }
 }

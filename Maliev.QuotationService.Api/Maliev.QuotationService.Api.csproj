@@ -18,16 +18,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Maliev.QuotationService.Application\Maliev.QuotationService.Application.csproj" />
-    <ProjectReference Include="..\Maliev.QuotationService.Infrastructure\Maliev.QuotationService.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0-rc.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="DTOs\**\*.cs" />
-    <Compile Remove="Services\**\*.cs" />
-    <Compile Remove="ExternalClients\**\*.cs" />
-    <Compile Remove="Consumers\**\*.cs" />
-    <Compile Remove="Middleware\**\*.cs" />
+    <ProjectReference Include="..\Maliev.QuotationService.Application\Maliev.QuotationService.Application.csproj" />
+    <ProjectReference Include="..\Maliev.QuotationService.Infrastructure\Maliev.QuotationService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

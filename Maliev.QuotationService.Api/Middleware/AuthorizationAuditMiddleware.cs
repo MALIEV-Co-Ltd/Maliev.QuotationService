@@ -1,6 +1,6 @@
-using Maliev.QuotationService.Data;
-using Maliev.QuotationService.Data.Entities;
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Infrastructure.Persistence;
+using Maliev.QuotationService.Domain.Entities;
+using Maliev.QuotationService.Domain.Enums;
 using System.Security.Claims;
 
 namespace Maliev.QuotationService.Api.Middleware;

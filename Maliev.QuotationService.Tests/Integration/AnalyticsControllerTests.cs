@@ -7,12 +7,12 @@ using Xunit;
 
 namespace Maliev.QuotationService.Tests.Integration;
 
-public class AnalyticsControllerTests : IClassFixture<BaseIntegrationTestFactory<Program, Maliev.QuotationService.Data.QuotationDbContext>>
+public class AnalyticsControllerTests : IClassFixture<BaseIntegrationTestFactory<Program, Maliev.QuotationService.Infrastructure.Persistence.QuotationDbContext>>
 {
-    private readonly BaseIntegrationTestFactory<Program, Maliev.QuotationService.Data.QuotationDbContext> _factory;
+    private readonly BaseIntegrationTestFactory<Program, Maliev.QuotationService.Infrastructure.Persistence.QuotationDbContext> _factory;
     private readonly HttpClient _adminClient;
 
-    public AnalyticsControllerTests(BaseIntegrationTestFactory<Program, Maliev.QuotationService.Data.QuotationDbContext> factory)
+    public AnalyticsControllerTests(BaseIntegrationTestFactory<Program, Maliev.QuotationService.Infrastructure.Persistence.QuotationDbContext> factory)
     {
         _factory = factory;
         // Use authenticated client with admin role

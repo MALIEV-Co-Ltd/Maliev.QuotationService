@@ -1,4 +1,4 @@
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Domain.Enums;
 
 namespace Maliev.QuotationService.Api.DTOs.Responses;
 

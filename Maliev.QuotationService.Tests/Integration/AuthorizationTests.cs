@@ -3,7 +3,8 @@ using System.Net.Http.Json;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Api.Services.IAM;
-using Maliev.QuotationService.Data.Entities;
+using Maliev.QuotationService.Domain.Entities;
+using Maliev.QuotationService.Domain.Enums;
 using Maliev.QuotationService.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -61,10 +62,10 @@ public class AuthorizationTests : BaseIntegrationTest
 
         // Verify Audit Log Entry
         var auditLog = await DbContext.AuditLogEntries
-            .FirstOrDefaultAsync(a => a.UserId == "unauthorized-user" && a.ActionType == Data.Enums.AuditActionType.Unauthorized);
+            .FirstOrDefaultAsync(a => a.UserId == "unauthorized-user" && a.ActionType == AuditActionType.Unauthorized);
 
         Assert.NotNull(auditLog);
-        Assert.Equal(Data.Enums.AuditEntityType.Security, auditLog.EntityType);
+        Assert.Equal(AuditEntityType.Security, auditLog.EntityType);
     }
 
     [Fact]
@@ -227,7 +228,7 @@ public class AuthorizationTests : BaseIntegrationTest
         {
             Id = Guid.NewGuid(),
             CustomerId = customer.Id,
-            Status = Data.Enums.QuotationStatus.Draft,
+            Status = QuotationStatus.Draft,
             ValidityPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
             ValidityPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
             CreatedAt = DateTime.UtcNow,
@@ -239,9 +240,9 @@ public class AuthorizationTests : BaseIntegrationTest
         return quotation;
     }
 
-    private CreateQuotationRequest CreateValidQuotationRequest(Guid customerId)
+    private Maliev.QuotationService.Api.DTOs.Requests.CreateQuotationRequest CreateValidQuotationRequest(Guid customerId)
     {
-        return new CreateQuotationRequest
+        return new Maliev.QuotationService.Api.DTOs.Requests.CreateQuotationRequest
         {
             CustomerId = customerId,
             ValidityPeriodStart = DateTime.UtcNow,

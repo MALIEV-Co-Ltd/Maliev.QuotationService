@@ -1,5 +1,5 @@
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
-using Maliev.QuotationService.Data;
+using Maliev.QuotationService.Infrastructure.Persistence;
 using Maliev.QuotationService.Tests.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;

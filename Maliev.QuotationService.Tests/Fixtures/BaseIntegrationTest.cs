@@ -1,5 +1,5 @@
 using System.Net.Http.Headers;
-using Maliev.QuotationService.Data;
+using Maliev.QuotationService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

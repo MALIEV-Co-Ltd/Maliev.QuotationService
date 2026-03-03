@@ -10,9 +10,4 @@
     <ProjectReference Include="..\Maliev.QuotationService.Domain\Maliev.QuotationService.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="..\Maliev.QuotationService.Api\DTOs\**\*.cs" />
-    <Compile Include="..\Maliev.QuotationService.Api\Services\Interfaces\**\*.cs" />
-  </ItemGroup>
-
 </Project>

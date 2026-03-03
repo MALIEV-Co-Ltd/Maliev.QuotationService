@@ -56,7 +56,7 @@ dotnet format
 - **Data Access**: Use Entity Framework Core. Use `DbContext` directly or via Repositories (current pattern favors direct DbContext in Services).
 - **DTOs**: Use specific Request/Response DTOs. Do not expose Entities directly in API endpoints.
 - **Logging**: Use `ILogger<T>` injected into the constructor.
-- **Validation**: Validate inputs in Services or using FluentValidation if available.
+- **Validation**: Validate inputs in Services using Data Annotations (`[Required]`, `[EmailAddress]`) or manual validation.
 
 ### Error Handling
 - Use global exception handling middleware (Standard Middleware).

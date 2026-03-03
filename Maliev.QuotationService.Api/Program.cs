@@ -1,6 +1,6 @@
 using Maliev.QuotationService.Api.Configuration.Extensions;
 using Maliev.QuotationService.Api.Services.Metrics;
-using Maliev.QuotationService.Data;
+using Maliev.QuotationService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using System.Threading.RateLimiting;

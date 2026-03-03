@@ -7,8 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\Maliev.QuotationService.Data\Entities\**\*.cs" />
-    <Compile Include="..\Maliev.QuotationService.Data\Enums\**\*.cs" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
   </ItemGroup>
 
 </Project>
