@@ -182,9 +182,9 @@ namespace Maliev.QuotationService.Infrastructure.Migrations
                     validity_period_end = table.Column<DateOnly>(type: "date", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    xmin = table.Column<uint>(type: "xid", nullable: false, defaultValue: 0u)
                 },
                 constraints: table =>
                 {

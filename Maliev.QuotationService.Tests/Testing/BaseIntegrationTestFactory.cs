@@ -307,7 +307,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     private async Task ApplyMigrationsAsync()
     {
         await using var context = CreateDbContext();
-        
+
         // Apply migrations - this is required for SnakeCaseNamingHelper to work correctly
         // EnsureCreated() does NOT work with custom naming conventions
         var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
@@ -320,7 +320,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         var tables = await context.Database
             .SqlQueryRaw<string>("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
             .ToListAsync();
-        
+
         if (!tables.Any())
         {
             throw new InvalidOperationException("No tables found in database after migration. Migrations may have failed.");

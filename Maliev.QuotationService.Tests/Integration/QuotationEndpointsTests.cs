@@ -98,8 +98,7 @@ public class QuotationEndpointsTests : BaseIntegrationTest
             ValidityPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
             ValidityPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            RowVersion = new byte[8] // Initialize with 8-byte array for concurrency
+            UpdatedAt = DateTime.UtcNow
         };
 
         var version1 = new QuotationVersion

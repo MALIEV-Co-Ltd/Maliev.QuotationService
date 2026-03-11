@@ -14,7 +14,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Maliev.QuotationService.Infrastructure.Migrations
 {
     [DbContext(typeof(QuotationDbContext))]
-    [Migration("20260302153620_InitialCreate")]
+    [Migration("20260305154410_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -22,7 +22,7 @@ namespace Maliev.QuotationService.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -437,12 +437,6 @@ namespace Maliev.QuotationService.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
 
                     b.Property<Guid?>("SourceRfqId")
                         .HasColumnType("uuid")

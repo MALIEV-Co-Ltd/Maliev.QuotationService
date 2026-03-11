@@ -15,7 +15,6 @@ public class Quotation
     public DateOnly ValidityPeriodEnd { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    public byte[]? RowVersion { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
 

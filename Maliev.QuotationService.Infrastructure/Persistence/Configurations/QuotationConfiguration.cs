@@ -18,7 +18,7 @@ public class QuotationConfiguration : IEntityTypeConfiguration<Quotation>
         builder.Property(q => q.ValidityPeriodEnd).IsRequired();
         builder.HasIndex(q => q.ValidityPeriodEnd);
 
-        builder.Property(q => q.RowVersion).IsRowVersion();
+        builder.Property<uint>("xmin").HasColumnType("xid").IsRowVersion();
 
         builder.Property(q => q.CreatedAt).HasDefaultValueSql("NOW()");
         builder.Property(q => q.UpdatedAt).IsRequired();

@@ -31,37 +31,44 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
     protected HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null)
     {
         var effectiveRoles = roles ?? new[] { "Employee" };
-        var claims = new Dictionary<string, string>();
+
+        // Map short role names to full role IDs
+        var roleMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Admin", "roles.quotation.admin" },
+            { "Manager", "roles.quotation.manager" },
+            { "Creator", "roles.quotation.creator" },
+            { "Viewer", "roles.quotation.viewer" },
+            { "Employee", "roles.quotation.creator" },
+            { "Customer", "roles.quotation.viewer" },
+            { "quotation-admin", "roles.quotation.admin" },
+            { "quotation-manager", "roles.quotation.manager" },
+            { "quotation-creator", "roles.quotation.creator" },
+            { "quotation-viewer", "roles.quotation.viewer" }
+        };
+
+        var mappedRoles = effectiveRoles.Select(r => roleMapping.TryGetValue(r, out var mapped) ? mapped : r).ToArray();
 
         // Map roles to permissions for tests to pass with new permission-based auth
-        // Use a simple mapping for common test roles
         var permissions = new List<string>();
-        foreach (var role in effectiveRoles)
+        foreach (var role in mappedRoles)
         {
-            if (role == "Admin" || role == "quotation-admin")
+            if (role == "roles.quotation.admin")
                 permissions.AddRange(Maliev.QuotationService.Api.Services.IAM.QuotationPermissions.All);
-            else if (role == "Manager" || role == "quotation-manager")
+            else if (role == "roles.quotation.manager")
                 permissions.AddRange(new[] {
                     "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update",
-                    "quotation.quotations.approve", "quotation.quotations.delete" });
-            else if (role == "Employee" || role == "quotation-creator")
+                    "quotation.quotations.approve", "quotation.quotations.delete", "quotation.quotations.send" });
+            else if (role == "roles.quotation.creator")
                 permissions.AddRange(new[] {
-                    "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update" });
-            else if (role == "Customer" || role == "quotation-viewer")
+                    "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update",
+                    "quotation.quotations.send", "quotation.lineitems.create", "quotation.lineitems.read",
+                    "quotation.templates.read", "quotation.templates.use" });
+            else if (role == "roles.quotation.viewer")
                 permissions.Add("quotation.quotations.read");
         }
 
-        foreach (var perm in permissions.Distinct())
-        {
-            // Note: Multiple claims with same key are supported by the factory
-            claims.Add($"perm_{perm}", perm);
-        }
-
-        // Adjust factory to handle multiple permissions if needed,
-        // but current factory takes Dictionary<string, string> which limits to one value per key.
-        // I need to update the factory to support multiple claims of same type.
-
-        var token = Factory.CreateTestJwtToken(userId, effectiveRoles, permissions.Distinct().ToArray());
+        var token = Factory.CreateTestJwtToken(userId, mappedRoles, permissions.Distinct().ToArray());
         var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;

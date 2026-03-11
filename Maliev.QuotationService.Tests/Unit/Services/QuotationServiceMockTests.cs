@@ -38,8 +38,8 @@ public class QuotationServiceMockTests
     [InlineData(QuotationStatus.Expired, QuotationStatus.Accepted, false)]
     [InlineData(QuotationStatus.Accepted, QuotationStatus.Cancelled, false)]
     public void QuotationStateMachine_IsValidTransition_ReturnsExpectedResult(
-        QuotationStatus from, 
-        QuotationStatus to, 
+        QuotationStatus from,
+        QuotationStatus to,
         bool expected)
     {
         var result = QuotationStateMachine.IsValidTransition(from, to);
@@ -50,7 +50,7 @@ public class QuotationServiceMockTests
     public void QuotationStateMachine_GetValidTransitions_Draft_ReturnsExpected()
     {
         var transitions = QuotationStateMachine.GetValidTransitions(QuotationStatus.Draft);
-        
+
         Assert.Contains(QuotationStatus.PendingApproval, transitions);
         Assert.Contains(QuotationStatus.CustomerReview, transitions);
         Assert.Contains(QuotationStatus.Cancelled, transitions);
@@ -60,7 +60,7 @@ public class QuotationServiceMockTests
     public void QuotationStateMachine_GetValidTransitions_PendingApproval_ReturnsExpected()
     {
         var transitions = QuotationStateMachine.GetValidTransitions(QuotationStatus.PendingApproval);
-        
+
         Assert.Contains(QuotationStatus.Approved, transitions);
         Assert.Contains(QuotationStatus.Draft, transitions);
         Assert.Contains(QuotationStatus.Cancelled, transitions);
@@ -70,7 +70,7 @@ public class QuotationServiceMockTests
     public void QuotationStateMachine_GetValidTransitions_Approved_ReturnsExpected()
     {
         var transitions = QuotationStateMachine.GetValidTransitions(QuotationStatus.Approved);
-        
+
         Assert.Contains(QuotationStatus.CustomerReview, transitions);
         Assert.Contains(QuotationStatus.Cancelled, transitions);
     }
@@ -79,7 +79,7 @@ public class QuotationServiceMockTests
     public void QuotationStateMachine_GetValidTransitions_CustomerReview_ReturnsExpected()
     {
         var transitions = QuotationStateMachine.GetValidTransitions(QuotationStatus.CustomerReview);
-        
+
         Assert.Contains(QuotationStatus.Accepted, transitions);
         Assert.Contains(QuotationStatus.Cancelled, transitions);
     }
@@ -88,7 +88,7 @@ public class QuotationServiceMockTests
     public void QuotationStateMachine_GetValidTransitions_Accepted_ReturnsExpected()
     {
         var transitions = QuotationStateMachine.GetValidTransitions(QuotationStatus.Accepted);
-        
+
         Assert.Contains(QuotationStatus.Expired, transitions);
     }
 }

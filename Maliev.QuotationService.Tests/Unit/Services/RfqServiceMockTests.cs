@@ -25,7 +25,7 @@ public class RfqServiceMockTests
     public void MetricsService_RecordsRfqCreated_DoesNotThrow()
     {
         var exception = Record.Exception(() => _metricsService.RecordRfqCreated("Website"));
-        
+
         Assert.Null(exception);
     }
 
@@ -33,7 +33,7 @@ public class RfqServiceMockTests
     public void MetricsService_RecordsRfqStatusTransition_DoesNotThrow()
     {
         var exception = Record.Exception(() => _metricsService.RecordRfqStatusTransition("New", "Qualified"));
-        
+
         Assert.Null(exception);
     }
 
@@ -41,7 +41,7 @@ public class RfqServiceMockTests
     public void MetricsService_RecordsQuotationCreated_DoesNotThrow()
     {
         var exception = Record.Exception(() => _metricsService.RecordQuotationCreated());
-        
+
         Assert.Null(exception);
     }
 
@@ -49,7 +49,7 @@ public class RfqServiceMockTests
     public void MetricsService_RecordsQuotationApproved_DoesNotThrow()
     {
         var exception = Record.Exception(() => _metricsService.RecordQuotationApproved());
-        
+
         Assert.Null(exception);
     }
 
@@ -57,7 +57,7 @@ public class RfqServiceMockTests
     public void MetricsService_RecordsInternalNoteCreated_DoesNotThrow()
     {
         var exception = Record.Exception(() => _metricsService.RecordInternalNoteCreated());
-        
+
         Assert.Null(exception);
     }
 
@@ -65,7 +65,7 @@ public class RfqServiceMockTests
     public void MetricsService_RecordsQuotationVersionCreated_DoesNotThrow()
     {
         var exception = Record.Exception(() => _metricsService.RecordQuotationVersionCreated());
-        
+
         Assert.Null(exception);
     }
 
@@ -73,7 +73,7 @@ public class RfqServiceMockTests
     public void MetricsService_RecordsQuotationStatusTransition_DoesNotThrow()
     {
         var exception = Record.Exception(() => _metricsService.RecordQuotationStatusTransition("Draft", "PendingApproval"));
-        
+
         Assert.Null(exception);
     }
 
@@ -81,9 +81,9 @@ public class RfqServiceMockTests
     public void MetricsService_Dispose_DoesNotThrow()
     {
         var metrics = new MetricsService();
-        
+
         var exception = Record.Exception(() => metrics.Dispose());
-        
+
         Assert.Null(exception);
     }
 }

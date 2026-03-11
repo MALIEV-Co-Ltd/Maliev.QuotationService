@@ -21,10 +21,15 @@ public class PermissionPolicyProvider : IAuthorizationPolicyProvider
 
     public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {
-        if (policyName.StartsWith("quotation.", StringComparison.OrdinalIgnoreCase))
+        // Handle both "quotation.xxx" and "Permission:quotation.xxx" formats
+        var permission = policyName.StartsWith("Permission:", StringComparison.OrdinalIgnoreCase)
+            ? policyName.Substring("Permission:".Length)
+            : policyName;
+
+        if (permission.StartsWith("quotation.", StringComparison.OrdinalIgnoreCase))
         {
             var policy = new AuthorizationPolicyBuilder();
-            policy.AddRequirements(new PermissionRequirement(policyName));
+            policy.AddRequirements(new PermissionRequirement(permission));
             return Task.FromResult<AuthorizationPolicy?>(policy.Build());
         }
 
