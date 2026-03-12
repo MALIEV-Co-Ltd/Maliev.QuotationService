@@ -3,7 +3,8 @@ using System.Net.Http.Json;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Api.Services.IAM;
-using Maliev.QuotationService.Data.Entities;
+using Maliev.QuotationService.Domain.Entities;
+using Maliev.QuotationService.Domain.Enums;
 using Maliev.QuotationService.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -28,7 +29,7 @@ public class AuthorizationTests : BaseIntegrationTest
         {
             { "permissions", QuotationPermissions.QuotationsCreate }
         };
-        var token = Factory.CreateTestJwtToken("creator-user", roles: new[] { "quotation-creator" }, additionalClaims: claims);
+        var token = Factory.CreateTestJwtToken("creator-user", roles: new[] { "roles.quotation.creator" }, additionalClaims: claims);
 
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -61,10 +62,10 @@ public class AuthorizationTests : BaseIntegrationTest
 
         // Verify Audit Log Entry
         var auditLog = await DbContext.AuditLogEntries
-            .FirstOrDefaultAsync(a => a.UserId == "unauthorized-user" && a.ActionType == Data.Enums.AuditActionType.Unauthorized);
+            .FirstOrDefaultAsync(a => a.UserId == "unauthorized-user" && a.ActionType == AuditActionType.Unauthorized);
 
         Assert.NotNull(auditLog);
-        Assert.Equal(Data.Enums.AuditEntityType.Security, auditLog.EntityType);
+        Assert.Equal(AuditEntityType.Security, auditLog.EntityType);
     }
 
     [Fact]
@@ -77,7 +78,7 @@ public class AuthorizationTests : BaseIntegrationTest
         {
             { "permissions", QuotationPermissions.QuotationsApprove }
         };
-        var token = Factory.CreateTestJwtToken("manager-user", roles: new[] { "quotation-manager" }, additionalClaims: claims);
+        var token = Factory.CreateTestJwtToken("manager-user", roles: new[] { "roles.quotation.manager" }, additionalClaims: claims);
 
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -102,7 +103,7 @@ public class AuthorizationTests : BaseIntegrationTest
         {
             { "permissions", QuotationPermissions.QuotationsCreate }
         };
-        var token = Factory.CreateTestJwtToken("creator-user", roles: new[] { "quotation-creator" }, additionalClaims: claims);
+        var token = Factory.CreateTestJwtToken("creator-user", roles: new[] { "roles.quotation.creator" }, additionalClaims: claims);
 
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -124,7 +125,7 @@ public class AuthorizationTests : BaseIntegrationTest
         {
             { "permissions", QuotationPermissions.QuotationsDelete }
         };
-        var token = Factory.CreateTestJwtToken("admin-user", roles: new[] { "quotation-admin" }, additionalClaims: claims);
+        var token = Factory.CreateTestJwtToken("admin-user", roles: new[] { "roles.quotation.admin" }, additionalClaims: claims);
 
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -149,7 +150,7 @@ public class AuthorizationTests : BaseIntegrationTest
         {
             { "permissions", QuotationPermissions.QuotationsApprove }
         };
-        var token = Factory.CreateTestJwtToken("manager-user", roles: new[] { "quotation-manager" }, additionalClaims: claims);
+        var token = Factory.CreateTestJwtToken("manager-user", roles: new[] { "roles.quotation.manager" }, additionalClaims: claims);
 
         using var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -227,21 +228,20 @@ public class AuthorizationTests : BaseIntegrationTest
         {
             Id = Guid.NewGuid(),
             CustomerId = customer.Id,
-            Status = Data.Enums.QuotationStatus.Draft,
+            Status = QuotationStatus.Draft,
             ValidityPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
             ValidityPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            RowVersion = new byte[8]
+            UpdatedAt = DateTime.UtcNow
         };
         DbContext.Quotations.Add(quotation);
         await DbContext.SaveChangesAsync();
         return quotation;
     }
 
-    private CreateQuotationRequest CreateValidQuotationRequest(Guid customerId)
+    private Maliev.QuotationService.Api.DTOs.Requests.CreateQuotationRequest CreateValidQuotationRequest(Guid customerId)
     {
-        return new CreateQuotationRequest
+        return new Maliev.QuotationService.Api.DTOs.Requests.CreateQuotationRequest
         {
             CustomerId = customerId,
             ValidityPeriodStart = DateTime.UtcNow,

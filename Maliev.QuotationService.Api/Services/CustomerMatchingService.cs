@@ -1,5 +1,5 @@
 using Maliev.QuotationService.Api.Services.Interfaces;
-using Maliev.QuotationService.Data;
+using Maliev.QuotationService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.QuotationService.Api.Services;

@@ -1,5 +1,5 @@
-using Maliev.QuotationService.Data.Entities;
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Domain.Entities;
+using Maliev.QuotationService.Domain.Enums;
 
 namespace Maliev.QuotationService.Api.Services.Interfaces;
 

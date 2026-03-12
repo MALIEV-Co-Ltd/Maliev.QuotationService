@@ -1,0 +1,15 @@
+using Maliev.QuotationService.Domain.Enums;
+
+namespace Maliev.QuotationService.Domain.Entities;
+
+public class DiscountStructure
+{
+    public Guid Id { get; set; }
+    public Guid QuotationVersionId { get; set; }
+    public DiscountType DiscountType { get; set; }
+    public decimal DiscountValue { get; set; }
+    public string? Conditions { get; set; }
+    public string? AuthorizationReason { get; set; }
+
+    public QuotationVersion QuotationVersion { get; set; } = null!;
+}

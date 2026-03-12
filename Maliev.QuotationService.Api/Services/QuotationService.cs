@@ -3,9 +3,9 @@ using Maliev.MessagingContracts;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
-using Maliev.QuotationService.Data;
-using Maliev.QuotationService.Data.Entities;
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Infrastructure.Persistence;
+using Maliev.QuotationService.Domain.Entities;
+using Maliev.QuotationService.Domain.Enums;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -45,7 +45,7 @@ public class QuotationService : IQuotationService
         IEnumerable<QuotationLineItemDto> lineItems,
         string? deliveryExpectations,
         string currentUserId,
-        Data.Enums.BillingIdentityType billingIdentityType = Data.Enums.BillingIdentityType.Corporate,
+        Domain.Enums.BillingIdentityType billingIdentityType = Domain.Enums.BillingIdentityType.Corporate,
         DiscountStructureDto? discountStructure = null,
         CancellationToken cancellationToken = default)
     {

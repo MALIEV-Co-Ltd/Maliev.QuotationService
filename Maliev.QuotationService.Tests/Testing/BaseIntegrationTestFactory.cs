@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using Moq;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 using Testcontainers.Redis;
@@ -263,6 +264,14 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             // Add MassTransit test harness for testing message publishing/consuming
             services.AddMassTransitTestHarness();
 
+            // Mock IIamServiceClient to avoid network calls and retries during tests
+            // This makes the handler fall back to JWT claims instead of calling IAM
+            var mockIamClient = new Moq.Mock<Maliev.Aspire.ServiceDefaults.IAM.IIamServiceClient>();
+            mockIamClient
+                .Setup(x => x.CheckPermissionAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<string>(), Moq.It.IsAny<string>(), Moq.It.IsAny<System.Threading.CancellationToken>()))
+                .ReturnsAsync(false);
+            services.AddScoped(_ => mockIamClient.Object);
+
             ConfigureAdditionalServices(services);
         });
     }
@@ -306,19 +315,24 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     /// </summary>
     private async Task ApplyMigrationsAsync()
     {
-        try
-        {
-            await using var context = CreateDbContext();
-            await context.Database.MigrateAsync();
+        await using var context = CreateDbContext();
 
-            // Verify tables exist
-            var tables = await context.Database
-                .SqlQueryRaw<string>("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-                .ToListAsync();
-        }
-        catch (Exception)
+        // Apply migrations - this is required for SnakeCaseNamingHelper to work correctly
+        // EnsureCreated() does NOT work with custom naming conventions
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
         {
-            throw;
+            await context.Database.MigrateAsync();
+        }
+
+        // Verify tables exist
+        var tables = await context.Database
+            .SqlQueryRaw<string>("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+            .ToListAsync();
+
+        if (!tables.Any())
+        {
+            throw new InvalidOperationException("No tables found in database after migration. Migrations may have failed.");
         }
     }
 

@@ -18,7 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Maliev.QuotationService.Data\Maliev.QuotationService.Data.csproj" />
+    <ProjectReference Include="..\Maliev.QuotationService.Application\Maliev.QuotationService.Application.csproj" />
+    <ProjectReference Include="..\Maliev.QuotationService.Infrastructure\Maliev.QuotationService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

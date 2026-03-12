@@ -1,5 +1,5 @@
 using Maliev.QuotationService.Api.Services;
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Domain.Enums;
 using Xunit;
 
 namespace Maliev.QuotationService.Tests.Unit;

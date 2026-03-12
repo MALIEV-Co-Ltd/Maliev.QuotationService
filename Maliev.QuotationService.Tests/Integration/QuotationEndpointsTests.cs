@@ -3,8 +3,8 @@ using System.Net.Http.Json;
 using Xunit;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
-using Maliev.QuotationService.Data.Entities;
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Domain.Entities;
+using Maliev.QuotationService.Domain.Enums;
 using Maliev.QuotationService.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 
@@ -98,8 +98,7 @@ public class QuotationEndpointsTests : BaseIntegrationTest
             ValidityPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
             ValidityPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            RowVersion = new byte[8] // Initialize with 8-byte array for concurrency
+            UpdatedAt = DateTime.UtcNow
         };
 
         var version1 = new QuotationVersion

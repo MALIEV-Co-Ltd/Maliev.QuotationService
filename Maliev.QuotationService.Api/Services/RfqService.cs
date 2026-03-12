@@ -1,8 +1,8 @@
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
-using Maliev.QuotationService.Data;
-using Maliev.QuotationService.Data.Entities;
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Infrastructure.Persistence;
+using Maliev.QuotationService.Domain.Entities;
+using Maliev.QuotationService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 

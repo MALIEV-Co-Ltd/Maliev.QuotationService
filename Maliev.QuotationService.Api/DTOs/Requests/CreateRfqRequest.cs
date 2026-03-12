@@ -1,4 +1,4 @@
-using Maliev.QuotationService.Data.Enums;
+using Maliev.QuotationService.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace Maliev.QuotationService.Api.DTOs.Requests;
