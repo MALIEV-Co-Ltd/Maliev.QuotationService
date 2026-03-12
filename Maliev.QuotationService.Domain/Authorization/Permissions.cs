@@ -22,7 +22,7 @@ public static class Permissions
     public const string MetricsRead = QuotationsRead;
 
     /// <summary>
-    /// All permission constants.
+    /// All unique permission constants (aliases resolved to single entries).
     /// </summary>
     public static readonly IReadOnlyList<string> All =
     [
@@ -31,12 +31,7 @@ public static class Permissions
         QuotationsUpdate,
         QuotationsDelete,
         QuotationsApprove,
-        RfqsCreate,
-        RfqsRead,
-        RfqsUpdate,
         CustomersRead,
-        CustomersUpdate,
-        AnalyticsRead,
-        MetricsRead
+        CustomersUpdate
     ];
 }
