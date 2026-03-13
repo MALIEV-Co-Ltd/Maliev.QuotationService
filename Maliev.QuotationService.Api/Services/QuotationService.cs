@@ -152,7 +152,7 @@ public class QuotationService : IQuotationService
                 await _publishEndpoint.Publish(new QuotationCreatedEvent(
                     MessageId: Guid.NewGuid(),
                     MessageName: "QuotationCreatedEvent",
-                    MessageType: MessageType.Event,
+                    MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
                     MessageVersion: "1.0.0",
                     PublishedBy: "QuotationService",
                     ConsumedBy: ["NotificationService", "AnalyticsService"],
@@ -386,7 +386,7 @@ public class QuotationService : IQuotationService
                     await _publishEndpoint.Publish(new QuotationAcceptedEvent(
                         MessageId: Guid.NewGuid(),
                         MessageName: "QuotationAcceptedEvent",
-                        MessageType: MessageType.Event,
+                        MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
                         MessageVersion: "1.0.0",
                         PublishedBy: "QuotationService",
                         ConsumedBy: ["OrderService", "NotificationService", "AnalyticsService"],
