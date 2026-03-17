@@ -10,11 +10,21 @@ public class HeaderForwardingHandler : DelegatingHandler
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the HeaderForwardingHandler.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     public HeaderForwardingHandler(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
     }
 
+    /// <summary>
+    /// Sends the HTTP request with the Authorization header forwarded.
+    /// </summary>
+    /// <param name="request">The HTTP request message.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The HTTP response message.</returns>
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var context = _httpContextAccessor.HttpContext;

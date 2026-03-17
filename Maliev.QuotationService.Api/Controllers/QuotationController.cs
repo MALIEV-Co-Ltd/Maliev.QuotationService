@@ -15,8 +15,11 @@ using System.Text.Json;
 
 namespace Maliev.QuotationService.Api.Controllers;
 
+/// <summary>
+/// Controller for managing quotations including creation, retrieval, sending, acceptance, and expiration.
+/// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("quotation/v{version:apiVersion}/quotations")]
 [RequirePermission(QuotationPermissions.QuotationsRead)]
 public class QuotationController : ControllerBase
@@ -26,6 +29,13 @@ public class QuotationController : ControllerBase
     private readonly ILogger<QuotationController> _logger;
     private readonly MetricsService _metricsService;
 
+    /// <summary>
+    /// Initializes a new instance of the QuotationController.
+    /// </summary>
+    /// <param name="quotationService">The quotation service.</param>
+    /// <param name="context">The database context.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="metricsService">The metrics service.</param>
     public QuotationController(
         IQuotationService quotationService,
         QuotationDbContext context,
@@ -520,7 +530,13 @@ public class QuotationController : ControllerBase
     }
 }
 
+/// <summary>
+/// Request model for updating quotation status.
+/// </summary>
 public class UpdateQuotationStatusRequest
 {
+    /// <summary>
+    /// The new status to set on the quotation.
+    /// </summary>
     public QuotationStatus Status { get; set; }
 }

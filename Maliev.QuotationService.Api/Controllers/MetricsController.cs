@@ -11,7 +11,7 @@ namespace Maliev.QuotationService.Api.Controllers.v1;
 /// Lightweight business metrics for dashboards.
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("quotation/v{version:apiVersion}/metrics")]
 [RequirePermission(QuotationPermissions.QuotationsRead)]
 public class MetricsController : ControllerBase

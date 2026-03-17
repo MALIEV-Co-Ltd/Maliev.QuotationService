@@ -38,10 +38,33 @@ public interface ICustomerMatchingService
 /// </summary>
 public class CustomerMatch
 {
+    /// <summary>
+    /// The unique identifier of the customer.
+    /// </summary>
     public Guid CustomerId { get; set; }
+
+    /// <summary>
+    /// The customer's name.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The customer's email address.
+    /// </summary>
     public string? Email { get; set; }
+
+    /// <summary>
+    /// The customer's phone number.
+    /// </summary>
     public string? PhoneNumber { get; set; }
+
+    /// <summary>
+    /// The confidence score of the match (0-100).
+    /// </summary>
     public double MatchConfidence { get; set; }
+
+    /// <summary>
+    /// The list of fields that matched.
+    /// </summary>
     public List<string> MatchingFields { get; set; } = new();
 }

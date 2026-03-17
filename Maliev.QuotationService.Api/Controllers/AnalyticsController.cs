@@ -7,8 +7,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.QuotationService.Api.Controllers.v1;
 
+/// <summary>
+/// Controller for quotation analytics and reporting.
+/// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("quotation/v{version:apiVersion}/analytics")]
 [RequirePermission(QuotationPermissions.QuotationsRead)]
 public class AnalyticsController : ControllerBase
@@ -16,6 +19,11 @@ public class AnalyticsController : ControllerBase
     private readonly IAnalyticsService _analyticsService;
     private readonly ILogger<AnalyticsController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the AnalyticsController.
+    /// </summary>
+    /// <param name="analyticsService">The analytics service.</param>
+    /// <param name="logger">The logger.</param>
     public AnalyticsController(
         IAnalyticsService analyticsService,
         ILogger<AnalyticsController> logger)

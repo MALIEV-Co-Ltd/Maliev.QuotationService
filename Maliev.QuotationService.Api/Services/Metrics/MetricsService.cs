@@ -22,6 +22,9 @@ public class MetricsService : IDisposable
     // Note Metrics
     private readonly Counter<long> _internalNotesCreated;
 
+    /// <summary>
+    /// Initializes a new instance of the MetricsService.
+    /// </summary>
     public MetricsService()
     {
         _meter = new Meter("quotations-meter", "1.0.0");
@@ -56,11 +59,21 @@ public class MetricsService : IDisposable
     }
 
     // RFQ Methods
+
+    /// <summary>
+    /// Records an RFQ creation event.
+    /// </summary>
+    /// <param name="channel">The channel source of the RFQ.</param>
     public void RecordRfqCreated(string channel)
     {
         _rfqCreated.Add(1, new KeyValuePair<string, object?>("channel", channel));
     }
 
+    /// <summary>
+    /// Records an RFQ status transition.
+    /// </summary>
+    /// <param name="fromStatus">The previous status.</param>
+    /// <param name="toStatus">The new status.</param>
     public void RecordRfqStatusTransition(string fromStatus, string toStatus)
     {
         _rfqStatusTransitions.Add(1,
@@ -69,11 +82,20 @@ public class MetricsService : IDisposable
     }
 
     // Quotation Methods
+
+    /// <summary>
+    /// Records a quotation creation event.
+    /// </summary>
     public void RecordQuotationCreated()
     {
         _quotationCreated.Add(1);
     }
 
+    /// <summary>
+    /// Records a quotation status transition.
+    /// </summary>
+    /// <param name="fromStatus">The previous status.</param>
+    /// <param name="toStatus">The new status.</param>
     public void RecordQuotationStatusTransition(string fromStatus, string toStatus)
     {
         _quotationStatusTransitions.Add(1,
@@ -81,22 +103,35 @@ public class MetricsService : IDisposable
             new KeyValuePair<string, object?>("to_status", toStatus));
     }
 
+    /// <summary>
+    /// Records a quotation approval event.
+    /// </summary>
     public void RecordQuotationApproved()
     {
         _quotationApprovals.Add(1);
     }
 
+    /// <summary>
+    /// Records a quotation version creation event.
+    /// </summary>
     public void RecordQuotationVersionCreated()
     {
         _quotationVersionsCreated.Add(1);
     }
 
     // Note Methods
+
+    /// <summary>
+    /// Records an internal note creation event.
+    /// </summary>
     public void RecordInternalNoteCreated()
     {
         _internalNotesCreated.Add(1);
     }
 
+    /// <summary>
+    /// Disposes of the metrics service and releases resources.
+    /// </summary>
     public void Dispose()
     {
         _meter?.Dispose();

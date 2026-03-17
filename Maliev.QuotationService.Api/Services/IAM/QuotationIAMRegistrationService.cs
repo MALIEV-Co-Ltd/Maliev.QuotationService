@@ -8,6 +8,11 @@ namespace Maliev.QuotationService.Api.Services.IAM;
 /// </summary>
 public class QuotationIAMRegistrationService : IAMRegistrationService
 {
+    /// <summary>
+    /// Initializes a new instance of the QuotationIAMRegistrationService.
+    /// </summary>
+    /// <param name="configuration">The application configuration.</param>
+    /// <param name="logger">The logger.</param>
     public QuotationIAMRegistrationService(
         IConfiguration configuration,
         ILogger<QuotationIAMRegistrationService> logger)
@@ -15,6 +20,10 @@ public class QuotationIAMRegistrationService : IAMRegistrationService
     {
     }
 
+    /// <summary>
+    /// Gets the permission registrations for the Quotation Service.
+    /// </summary>
+    /// <returns>Enumerable of permission registrations.</returns>
     protected override IEnumerable<PermissionRegistration> GetPermissions()
     {
         return QuotationPermissions.AllWithDescriptions.Select(p => new PermissionRegistration
@@ -24,6 +33,10 @@ public class QuotationIAMRegistrationService : IAMRegistrationService
         });
     }
 
+    /// <summary>
+    /// Gets the predefined role registrations for the Quotation Service.
+    /// </summary>
+    /// <returns>Enumerable of role registrations.</returns>
     protected override IEnumerable<RoleRegistration> GetPredefinedRoles()
     {
         return QuotationPredefinedRoles.All.Select(r => new RoleRegistration

@@ -17,6 +17,12 @@ public class RfqService : IRfqService
     private readonly ILogger<RfqService> _logger;
     private readonly MetricsService _metricsService;
 
+    /// <summary>
+    /// Initializes a new instance of the RfqService.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="metricsService">The metrics service.</param>
     public RfqService(
         QuotationDbContext context,
         ILogger<RfqService> logger,
@@ -30,6 +36,15 @@ public class RfqService : IRfqService
     /// <summary>
     /// Creates a new RFQ.
     /// </summary>
+    /// <param name="customerEmail">The customer's email address.</param>
+    /// <param name="customerName">The customer's name.</param>
+    /// <param name="customerPhoneNumber">The customer's phone number.</param>
+    /// <param name="channelSource">The source channel of the RFQ.</param>
+    /// <param name="requestDetails">Additional request details.</param>
+    /// <param name="uploadServiceFileIds">List of file IDs from the upload service.</param>
+    /// <param name="currentUserId">The user ID creating the RFQ.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The created RFQ.</returns>
     public async Task<Rfq> CreateAsync(
         string customerEmail,
         string customerName,
@@ -123,6 +138,9 @@ public class RfqService : IRfqService
     /// <summary>
     /// Retrieves an RFQ by its unique identifier.
     /// </summary>
+    /// <param name="rfqId">The unique identifier of the RFQ.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The RFQ if found, otherwise null.</returns>
     public async Task<Rfq?> GetByIdAsync(Guid rfqId, CancellationToken cancellationToken = default)
     {
         return await _context.Rfqs
@@ -135,6 +153,16 @@ public class RfqService : IRfqService
     /// <summary>
     /// Retrieves all RFQs with optional filtering.
     /// </summary>
+    /// <param name="channelSource">Filter by channel source.</param>
+    /// <param name="status">Filter by RFQ status.</param>
+    /// <param name="customerId">Filter by customer ID.</param>
+    /// <param name="assignedStaffUserId">Filter by assigned staff user ID.</param>
+    /// <param name="fromDate">Filter by creation date (start).</param>
+    /// <param name="toDate">Filter by creation date (end).</param>
+    /// <param name="page">The page number for pagination.</param>
+    /// <param name="pageSize">The page size for pagination.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple containing the list of RFQs and the total count.</returns>
     public async Task<(List<Rfq> Rfqs, int TotalCount)> GetAllAsync(
         RfqChannel? channelSource = null,
         RfqStatus? status = null,
@@ -196,6 +224,12 @@ public class RfqService : IRfqService
     /// <summary>
     /// Updates an RFQ.
     /// </summary>
+    /// <param name="rfqId">The unique identifier of the RFQ.</param>
+    /// <param name="requestDetails">Updated request details.</param>
+    /// <param name="assignedStaffUserId">The staff user to assign the RFQ to.</param>
+    /// <param name="currentUserId">The user ID making the update.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The updated RFQ.</returns>
     public async Task<Rfq> UpdateAsync(
         Guid rfqId,
         object? requestDetails,
@@ -252,6 +286,11 @@ public class RfqService : IRfqService
     /// <summary>
     /// Updates the status of an RFQ.
     /// </summary>
+    /// <param name="rfqId">The unique identifier of the RFQ.</param>
+    /// <param name="status">The new status.</param>
+    /// <param name="currentUserId">The user ID making the update.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The updated RFQ.</returns>
     public async Task<Rfq> UpdateStatusAsync(
         Guid rfqId,
         RfqStatus status,
@@ -305,6 +344,11 @@ public class RfqService : IRfqService
     /// <summary>
     /// Adds an internal note to an RFQ.
     /// </summary>
+    /// <param name="rfqId">The unique identifier of the RFQ.</param>
+    /// <param name="content">The content of the note.</param>
+    /// <param name="currentUserId">The user ID adding the note.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The created note.</returns>
     public async Task<InternalNote> AddNoteAsync(
         Guid rfqId,
         string content,
@@ -356,6 +400,11 @@ public class RfqService : IRfqService
     /// <summary>
     /// Assigns an RFQ to a staff member.
     /// </summary>
+    /// <param name="rfqId">The unique identifier of the RFQ.</param>
+    /// <param name="assignedStaffUserId">The staff user ID to assign the RFQ to.</param>
+    /// <param name="currentUserId">The user ID making the assignment.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The updated RFQ.</returns>
     public async Task<Rfq> AssignAsync(
         Guid rfqId,
         string assignedStaffUserId,
@@ -407,6 +456,10 @@ public class RfqService : IRfqService
     /// <summary>
     /// Marks an RFQ as converted.
     /// </summary>
+    /// <param name="rfqId">The unique identifier of the RFQ.</param>
+    /// <param name="currentUserId">The user ID making the conversion.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The RFQ ID.</returns>
     public async Task<Guid> MarkRfqAsConvertedAsync(
         Guid rfqId,
         string currentUserId,

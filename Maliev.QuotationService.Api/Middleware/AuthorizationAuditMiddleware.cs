@@ -13,12 +13,22 @@ public class AuthorizationAuditMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<AuthorizationAuditMiddleware> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the AuthorizationAuditMiddleware.
+    /// </summary>
+    /// <param name="next">The next middleware in the pipeline.</param>
+    /// <param name="logger">The logger.</param>
     public AuthorizationAuditMiddleware(RequestDelegate next, ILogger<AuthorizationAuditMiddleware> logger)
     {
         _next = next;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Invokes the middleware to process the request.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
+    /// <param name="dbContext">The database context.</param>
     public async Task InvokeAsync(HttpContext context, QuotationDbContext dbContext)
     {
         await _next(context);
@@ -29,6 +39,11 @@ public class AuthorizationAuditMiddleware
         }
     }
 
+    /// <summary>
+    /// Audits an unauthorized access attempt to the database.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
+    /// <param name="dbContext">The database context.</param>
     private async Task AuditUnauthorizedAttemptAsync(HttpContext context, QuotationDbContext dbContext)
     {
         var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value

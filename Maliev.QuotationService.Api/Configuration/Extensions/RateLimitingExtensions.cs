@@ -2,8 +2,16 @@ using System.Threading.RateLimiting;
 
 namespace Maliev.QuotationService.Api.Configuration.Extensions;
 
+/// <summary>
+/// Extension methods for configuring rate limiting.
+/// </summary>
 public static class RateLimitingExtensions
 {
+    /// <summary>
+    /// Adds rate limiting services to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddRateLimiting(this IServiceCollection services)
     {
         services.AddRateLimiter(options =>

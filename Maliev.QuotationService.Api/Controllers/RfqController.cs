@@ -14,8 +14,11 @@ using System.Text.Json;
 
 namespace Maliev.QuotationService.Api.Controllers.v1;
 
+/// <summary>
+/// Controller for managing Request for Quotation (RFQ) operations including creation, retrieval, and status updates.
+/// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("quotation/v{version:apiVersion}/rfqs")]
 [RequirePermission(QuotationPermissions.QuotationsRead)]
 public class RfqController : ControllerBase
@@ -24,6 +27,12 @@ public class RfqController : ControllerBase
     private readonly QuotationDbContext _context;
     private readonly ILogger<RfqController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the RfqController.
+    /// </summary>
+    /// <param name="rfqService">The RFQ service.</param>
+    /// <param name="context">The database context.</param>
+    /// <param name="logger">The logger.</param>
     public RfqController(
         IRfqService rfqService,
         QuotationDbContext context,

@@ -6,8 +6,16 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Maliev.QuotationService.Api.Configuration.Extensions;
 
+/// <summary>
+/// Extension methods for registering application services.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds application services to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<IQuotationService, Maliev.QuotationService.Api.Services.QuotationService>();
@@ -21,6 +29,12 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds external service clients to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">The configuration.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddExternalServiceClients(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddTransient<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();

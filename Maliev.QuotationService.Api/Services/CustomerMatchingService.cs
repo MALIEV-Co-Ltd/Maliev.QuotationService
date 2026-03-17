@@ -4,11 +4,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.QuotationService.Api.Services;
 
+/// <summary>
+/// Service for matching and linking customer records across channels.
+/// </summary>
 public class CustomerMatchingService : ICustomerMatchingService
 {
     private readonly QuotationDbContext _context;
     private readonly ILogger<CustomerMatchingService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the CustomerMatchingService.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="logger">The logger.</param>
     public CustomerMatchingService(
         QuotationDbContext context,
         ILogger<CustomerMatchingService> logger)
@@ -17,6 +25,14 @@ public class CustomerMatchingService : ICustomerMatchingService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Gets potential customer matches based on contact information.
+    /// </summary>
+    /// <param name="email">The customer's email address.</param>
+    /// <param name="phoneNumber">The customer's phone number.</param>
+    /// <param name="name">The customer's name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>List of potential customer matches.</returns>
     public async Task<IEnumerable<CustomerMatch>> GetMatchSuggestionsAsync(
         string? email,
         string? phoneNumber,
@@ -88,6 +104,13 @@ public class CustomerMatchingService : ICustomerMatchingService
         return suggestions.OrderByDescending(s => s.MatchConfidence);
     }
 
+    /// <summary>
+    /// Links a source customer to a target customer (merges records).
+    /// </summary>
+    /// <param name="sourceCustomerId">The source customer ID to be merged.</param>
+    /// <param name="targetCustomerId">The target customer ID to merge into.</param>
+    /// <param name="currentUserId">The user ID performing the link.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task LinkCustomersAsync(
         Guid sourceCustomerId,
         Guid targetCustomerId,
@@ -134,6 +157,13 @@ public class CustomerMatchingService : ICustomerMatchingService
         }
     }
 
+    /// <summary>
+    /// Unlinks a previously merged customer record.
+    /// </summary>
+    /// <param name="sourceCustomerId">The source customer ID to unlink.</param>
+    /// <param name="targetCustomerId">The target customer ID.</param>
+    /// <param name="currentUserId">The user ID performing the unlink.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task UnlinkCustomersAsync(
         Guid sourceCustomerId,
         Guid targetCustomerId,

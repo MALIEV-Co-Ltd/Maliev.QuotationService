@@ -2,11 +2,19 @@ using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 
 namespace Maliev.QuotationService.Api.ExternalClients;
 
+/// <summary>
+/// Client for interacting with the PDF Service API.
+/// </summary>
 public class PdfServiceClient : IPdfServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<PdfServiceClient> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the PdfServiceClient.
+    /// </summary>
+    /// <param name="httpClient">The HTTP client.</param>
+    /// <param name="logger">The logger.</param>
     public PdfServiceClient(
         HttpClient httpClient,
         ILogger<PdfServiceClient> logger)
@@ -15,6 +23,12 @@ public class PdfServiceClient : IPdfServiceClient
         _logger = logger;
     }
 
+    /// <summary>
+    /// Generates a PDF for a quotation.
+    /// </summary>
+    /// <param name="payload">The quotation data to include in the PDF.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The PDF generation response.</returns>
     public async Task<PdfGenerationResponseDto> GeneratePdfAsync(QuotationPdfPayload payload, CancellationToken cancellationToken = default)
     {
         try

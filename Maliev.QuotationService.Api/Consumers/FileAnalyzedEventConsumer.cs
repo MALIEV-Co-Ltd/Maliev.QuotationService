@@ -14,12 +14,21 @@ public class FileAnalyzedEventConsumer : IConsumer<FileAnalyzedEvent>
     private readonly QuotationDbContext _dbContext;
     private readonly ILogger<FileAnalyzedEventConsumer> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the FileAnalyzedEventConsumer.
+    /// </summary>
+    /// <param name="dbContext">The database context.</param>
+    /// <param name="logger">The logger.</param>
     public FileAnalyzedEventConsumer(QuotationDbContext dbContext, ILogger<FileAnalyzedEventConsumer> logger)
     {
         _dbContext = dbContext;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Processes the FileAnalyzedEvent and updates file reference metrics.
+    /// </summary>
+    /// <param name="context">The consume context.</param>
     public async Task Consume(ConsumeContext<FileAnalyzedEvent> context)
     {
         var message = context.Message;

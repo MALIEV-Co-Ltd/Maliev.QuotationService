@@ -5,11 +5,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.QuotationService.Api.Services;
 
+/// <summary>
+/// Service for business performance analytics and reporting.
+/// </summary>
 public class AnalyticsService : IAnalyticsService
 {
     private readonly QuotationDbContext _context;
     private readonly ILogger<AnalyticsService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the AnalyticsService.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="logger">The logger.</param>
     public AnalyticsService(
         QuotationDbContext context,
         ILogger<AnalyticsService> logger)
@@ -18,6 +26,12 @@ public class AnalyticsService : IAnalyticsService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Gets RFQ to quotation conversion rates by channel.
+    /// </summary>
+    /// <param name="channelSource">Optional channel to filter by.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>List of conversion rate reports.</returns>
     public async Task<IEnumerable<ConversionRateReport>> GetConversionRatesByChannelAsync(
         RfqChannel? channelSource = null,
         CancellationToken cancellationToken = default)
@@ -42,6 +56,13 @@ public class AnalyticsService : IAnalyticsService
         return results;
     }
 
+    /// <summary>
+    /// Gets average turnaround time from RFQ to quotation.
+    /// </summary>
+    /// <param name="fromDate">Optional start date for filtering.</param>
+    /// <param name="toDate">Optional end date for filtering.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The turnaround time report.</returns>
     public async Task<TurnaroundTimeReport> GetAverageTurnaroundTimeAsync(
         DateTime? fromDate = null,
         DateTime? toDate = null,
@@ -92,6 +113,12 @@ public class AnalyticsService : IAnalyticsService
         };
     }
 
+    /// <summary>
+    /// Gets a list of abandoned RFQs (not converted within threshold).
+    /// </summary>
+    /// <param name="thresholdDays">Number of days after which an RFQ is considered abandoned.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>List of abandoned RFQ reports.</returns>
     public async Task<IEnumerable<AbandonedRfqReport>> GetAbandonedRfqsAsync(
         int thresholdDays = 30,
         CancellationToken cancellationToken = default)

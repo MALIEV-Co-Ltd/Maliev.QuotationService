@@ -22,6 +22,13 @@ public class QuotationService : IQuotationService
     private readonly MetricsService _metricsService;
     private readonly IPublishEndpoint _publishEndpoint;
 
+    /// <summary>
+    /// Initializes a new instance of the QuotationService.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="metricsService">The metrics service.</param>
+    /// <param name="publishEndpoint">The publish endpoint for messaging.</param>
     public QuotationService(
         QuotationDbContext context,
         ILogger<QuotationService> logger,
@@ -37,6 +44,17 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Creates a new quotation.
     /// </summary>
+    /// <param name="customerId">The unique identifier of the customer.</param>
+    /// <param name="sourceRfqId">The unique identifier of the source RFQ, if any.</param>
+    /// <param name="validityPeriodStart">The start date of the validity period.</param>
+    /// <param name="validityPeriodEnd">The end date of the validity period.</param>
+    /// <param name="lineItems">The line items for the quotation.</param>
+    /// <param name="deliveryExpectations">Delivery expectations or notes.</param>
+    /// <param name="currentUserId">The user ID creating the quotation.</param>
+    /// <param name="billingIdentityType">The billing identity type.</param>
+    /// <param name="discountStructure">The discount structure to apply, if any.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The created quotation.</returns>
     public async Task<Quotation> CreateAsync(
         Guid customerId,
         Guid? sourceRfqId,
@@ -186,6 +204,9 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Retrieves a quotation by its unique identifier.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The quotation if found, otherwise null.</returns>
     public async Task<Quotation?> GetByIdAsync(Guid quotationId, CancellationToken cancellationToken = default)
     {
         return await _context.Quotations
@@ -201,6 +222,14 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Retrieves all quotations with optional filtering.
     /// </summary>
+    /// <param name="status">Filter by quotation status.</param>
+    /// <param name="customerId">Filter by customer ID.</param>
+    /// <param name="fromDate">Filter by creation date (start).</param>
+    /// <param name="toDate">Filter by creation date (end).</param>
+    /// <param name="page">The page number for pagination.</param>
+    /// <param name="pageSize">The page size for pagination.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple containing the list of quotations and the total count.</returns>
     public async Task<(List<Quotation> Quotations, int TotalCount)> GetAllAsync(
         QuotationStatus? status = null,
         Guid? customerId = null,
@@ -250,6 +279,14 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Updates an existing quotation by creating a new version.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="lineItems">The updated line items.</param>
+    /// <param name="changeSummary">A summary of the changes.</param>
+    /// <param name="deliveryExpectations">Updated delivery expectations.</param>
+    /// <param name="discountStructure">The updated discount structure.</param>
+    /// <param name="currentUserId">The user ID making the update.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The updated quotation.</returns>
     public async Task<Quotation> UpdateAsync(
         Guid quotationId,
         IEnumerable<QuotationLineItemDto>? lineItems,
@@ -323,6 +360,11 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Updates the status of a quotation.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="status">The new status.</param>
+    /// <param name="currentUserId">The user ID making the update.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The updated quotation.</returns>
     public async Task<Quotation> UpdateStatusAsync(
         Guid quotationId,
         QuotationStatus status,
@@ -419,6 +461,10 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Approves a quotation.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="currentUserId">The user ID approving the quotation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The approved quotation.</returns>
     public async Task<Quotation> ApproveAsync(
         Guid quotationId,
         string currentUserId,
@@ -475,6 +521,11 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Adds an internal note to a quotation.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="content">The content of the note.</param>
+    /// <param name="currentUserId">The user ID adding the note.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The created note.</returns>
     public async Task<InternalNote> AddNoteAsync(
         Guid quotationId,
         string content,
@@ -525,6 +576,9 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Gets all versions of a quotation.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The list of versions.</returns>
     public async Task<List<QuotationVersion>> GetVersionsAsync(
         Guid quotationId,
         CancellationToken cancellationToken = default)
@@ -541,6 +595,10 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Gets a specific version of a quotation.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="versionNumber">The version number to retrieve.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The version if found, otherwise null.</returns>
     public async Task<QuotationVersion?> GetVersionByNumberAsync(
         Guid quotationId,
         int versionNumber,
@@ -556,6 +614,10 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Generates a PDF for a quotation.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="versionNumber">The specific version number to generate PDF for.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The PDF bytes.</returns>
     public async Task<byte[]> GeneratePdfAsync(
         Guid quotationId,
         int? versionNumber = null,
@@ -581,6 +643,8 @@ public class QuotationService : IQuotationService
     /// <summary>
     /// Deletes a quotation.
     /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task DeleteAsync(Guid quotationId, CancellationToken cancellationToken = default)
     {
         var quotation = await _context.Quotations.FindAsync(new object[] { quotationId }, cancellationToken);

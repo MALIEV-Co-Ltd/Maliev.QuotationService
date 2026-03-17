@@ -14,12 +14,21 @@ public class FileDeletedEventConsumer : IConsumer<FileDeletedEvent>
     private readonly QuotationDbContext _dbContext;
     private readonly ILogger<FileDeletedEventConsumer> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the FileDeletedEventConsumer.
+    /// </summary>
+    /// <param name="dbContext">The database context.</param>
+    /// <param name="logger">The logger.</param>
     public FileDeletedEventConsumer(QuotationDbContext dbContext, ILogger<FileDeletedEventConsumer> logger)
     {
         _dbContext = dbContext;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Processes the FileDeletedEvent and removes file references.
+    /// </summary>
+    /// <param name="context">The consume context.</param>
     public async Task Consume(ConsumeContext<FileDeletedEvent> context)
     {
         var message = context.Message;
