@@ -1,4 +1,5 @@
 using Maliev.Aspire.ServiceDefaults.IAM;
+using Maliev.QuotationService.Application.Authorization;
 
 namespace Maliev.QuotationService.Api.Services.IAM;
 

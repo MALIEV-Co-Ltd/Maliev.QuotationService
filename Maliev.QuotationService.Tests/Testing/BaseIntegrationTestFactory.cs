@@ -18,7 +18,7 @@ using Testcontainers.RabbitMq;
 using Testcontainers.Redis;
 using Xunit;
 
-using Maliev.QuotationService.Api.Services.IAM;
+using Maliev.QuotationService.Application.Authorization;
 
 // Disable parallel execution to prevent race conditions on the shared singleton database
 [assembly: CollectionBehavior(DisableTestParallelization = true)]

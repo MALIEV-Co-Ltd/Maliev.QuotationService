@@ -2,7 +2,7 @@ using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
-using Maliev.QuotationService.Api.Services.IAM;
+using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Infrastructure.Persistence;
 using Maliev.QuotationService.Domain.Enums;

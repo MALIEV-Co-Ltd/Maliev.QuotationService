@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
-using Maliev.QuotationService.Api.Services.IAM;
+using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Domain.Entities;
 using Maliev.QuotationService.Domain.Enums;
 using Maliev.QuotationService.Tests.Fixtures;

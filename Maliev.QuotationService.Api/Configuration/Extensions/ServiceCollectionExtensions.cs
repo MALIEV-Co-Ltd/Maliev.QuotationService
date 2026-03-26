@@ -1,6 +1,7 @@
 using Maliev.QuotationService.Api.ExternalClients;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 using Maliev.QuotationService.Api.Services.IAM;
+using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 

@@ -1,4 +1,5 @@
 using Maliev.QuotationService.Api.Configuration.Extensions;
+using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;

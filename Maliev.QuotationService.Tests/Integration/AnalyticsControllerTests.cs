@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Maliev.QuotationService.Api.Services.Interfaces;
-using Maliev.QuotationService.Api.Services.IAM;
+using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Tests.Testing;
 using Xunit;
 

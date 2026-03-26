@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
-using Maliev.QuotationService.Api.Services.IAM;
+using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -1,4 +1,4 @@
-namespace Maliev.QuotationService.Api.Services.IAM;
+namespace Maliev.QuotationService.Application.Authorization;
 
 /// <summary>
 /// Predefined roles for the Quotation Service.
@@ -6,21 +6,13 @@ namespace Maliev.QuotationService.Api.Services.IAM;
 /// </summary>
 public static class QuotationPredefinedRoles
 {
-    /// <summary>
-    /// Full access to all quotation resources and management operations.
-    /// </summary>
+    /// <summary>Full access to all quotation resources and management operations.</summary>
     public const string Admin = "roles.quotation.admin";
-    /// <summary>
-    /// Can manage quotations, approve them, and manage templates.
-    /// </summary>
+    /// <summary>Can manage quotations, approve them, and manage templates.</summary>
     public const string Manager = "roles.quotation.manager";
-    /// <summary>
-    /// Can create and send quotations, and use templates.
-    /// </summary>
+    /// <summary>Can create and send quotations, and use templates.</summary>
     public const string Creator = "roles.quotation.creator";
-    /// <summary>
-    /// Read-only access to quotations and templates.
-    /// </summary>
+    /// <summary>Read-only access to quotations and templates.</summary>
     public const string Viewer = "roles.quotation.viewer";
 
     /// <summary>

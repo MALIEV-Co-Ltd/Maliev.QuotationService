@@ -54,7 +54,7 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         foreach (var role in mappedRoles)
         {
             if (role == "roles.quotation.admin")
-                permissions.AddRange(Maliev.QuotationService.Api.Services.IAM.QuotationPermissions.All);
+                permissions.AddRange(Maliev.QuotationService.Application.Authorization.QuotationPermissions.All);
             else if (role == "roles.quotation.manager")
                 permissions.AddRange(new[] {
                     "quotation.quotations.create", "quotation.quotations.read", "quotation.quotations.update",
