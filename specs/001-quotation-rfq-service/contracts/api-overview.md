@@ -206,7 +206,6 @@ Common query parameters for list endpoints:
 The service integrates with external MALIEV services. Calls include:
 
 - `X-Correlation-Id`: Request correlation ID for distributed tracing
-- `X-User-Id`: Current user ID (propagated from JWT)
 - `X-Service-Name`: "Maliev.QuotationService"
 - `X-Request-Timestamp`: ISO 8601 timestamp
 
