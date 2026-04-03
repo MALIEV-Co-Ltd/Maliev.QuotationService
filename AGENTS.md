@@ -1,76 +1,106 @@
 # Agent Instructions for Maliev.QuotationService
 
-## Build & Test Commands
+> **Workspace root** `B:\maliev` contains **41 independent git repos**. Each `Maliev.*` folder is its own repo. Always work within the service directory.
 
-### Build
-Run from the solution root:
-```bash
-dotnet build
+---
+
+## Build, Test & Lint Commands
+
+All commands run from `B:\maliev\Maliev.QuotationService`.
+
+```powershell
+# Build (treats warnings as errors — all must be fixed)
+dotnet build Maliev.QuotationService.slnx
+
+# Run all tests
+dotnet test Maliev.QuotationService.slnx --verbosity normal
+
+# Run a single test method
+dotnet test --filter "FullyQualifiedName~RfqServiceTests.CreateAsync_ShouldCreateRfq_WhenValidRequest"
+
+# Run all tests in a class
+dotnet test --filter "FullyQualifiedName~RfqServiceTests"
+
+# Run with code coverage
+dotnet test Maliev.QuotationService.slnx --collect:"XPlat Code Coverage"
+
+# Format check
+dotnet format Maliev.QuotationService.slnx
+
+# EF Core migrations (Infrastructure project only)
+dotnet ef migrations add <Name> --project Maliev.QuotationService.Infrastructure --startup-project Maliev.QuotationService.Infrastructure
 ```
 
-### Test
-Run all tests:
-```bash
-dotnet test
+---
+
+## Code Style & Conventions
+
+### Workspace Structure
+
+```
+Maliev.QuotationService/
+├── Maliev.QuotationService.Api/              # Controllers, Consumers, Middleware
+├── Maliev.QuotationService.Application/      # Use cases, DTOs, Interfaces, Handlers
+├── Maliev.QuotationService.Domain/           # Entities, value objects, domain interfaces
+├── Maliev.QuotationService.Data/             # (Legacy) EF Core Entities, DbContext
+├── Maliev.QuotationService.Infrastructure/   # EF Core DbContext, repositories, HTTP clients, Migrations
+├── Maliev.QuotationService.Tests/            # Unit + Integration tests (xUnit)
+├── Directory.Build.props                     # Central package versioning
+└── Maliev.QuotationService.slnx             # Solution file (.slnx preferred over .sln)
 ```
 
-Run a single test (xUnit):
-```bash
-dotnet test --filter "FullyQualifiedName=Maliev.QuotationService.Tests.Unit.Services.RfqServiceTests.CreateAsync_ShouldCreateRfq_WhenValidRequest"
-```
-*Note: Replace the fully qualified name with the specific test method you want to run.*
+### C# Naming & Formatting
+- **Framework**: .NET 10.0, Latest C#
+- **Namespaces**: File-scoped (`namespace Maliev.QuotationService.Domain.Entities;`)
+- **Classes/Methods/Properties**: `PascalCase`
+- **Private fields**: `_camelCase` (underscore prefix)
+- **Parameters/locals**: `camelCase`
+- **Async methods**: Suffix with `Async` (e.g., `GetByIdAsync`)
+- **Interfaces**: Prefix with `I` (e.g., `IRfqService`)
+- **Permissions**: GCP-style `{domain}.{plural-resource}.{action}` as `public const string` in a `Permissions` static class
+  - Valid: `quotation.rfqs.create`, `quotation.quotes.approve`
+  - Invalid: `quotation.rfq.create` (singular), `quotation.create` (missing resource)
+- **XML docs**: Required on ALL public methods and properties
+- **Nullable**: Enabled (`<Nullable>enable</Nullable>`). Use `?` explicitly
+- **Imports**: System first, then third-party, then local. Alphabetize within groups. Remove unused `using`
+- **Braces**: Allman style (new line) for methods and control structures. Expression-bodied for properties/accessors
+- **Indentation**: 4 spaces, LF line endings, UTF-8, trim trailing whitespace
 
-### Lint/Format
-Format code according to .NET standards:
-```bash
-dotnet format
-```
+### C# Patterns
+- **DI**: Constructor injection with `private readonly` fields
+- **Controllers**: `[ApiController]`, `[ApiVersion("1")]`, `[Route("quotation/v{version:apiVersion}")]`
+- **Logging**: `ILogger<T>` with structured placeholders (never interpolate): `_logger.LogInformation("Processing {RfqId}", rfqId)`
+- **Error handling**: Global exception middleware. Return `ProblemDetails` / `ErrorResponse` DTOs. Never expose stack traces
+- **JSON**: Check existing conventions in this service for naming policy
+- **Manual mapping**: Static extension methods (`ToDto()`, `ToEntity()`). AutoMapper is banned
+- **Validation**: `System.ComponentModel.DataAnnotations` on DTOs. FluentValidation is banned
+- **Data Access**: Use Entity Framework Core. Current pattern favors direct `DbContext` in services.
 
-## Code Style Guidelines
+---
 
-### General
-- **Framework**: .NET 10.0
-- **Language Version**: Latest C#
-- **Nullable**: Enabled (`<Nullable>enable</Nullable>`). Handle nullability explicitly.
-- **Async/Await**: Use `async/await` for all I/O bound operations. Always pass `CancellationToken` to async methods where supported.
-- **Namespaces**: Use file-scoped namespaces (e.g., `namespace Maliev.QuotationService.Api.Services;`).
+## Banned Libraries (Build Will Fail)
 
-### Naming Conventions
-- **Classes/Methods/Properties**: PascalCase.
-- **Parameters/Locals**: camelCase.
-- **Private Fields**: _camelCase (e.g., `private readonly QuotationDbContext _context;`).
-- **Interfaces**: Prefix with `I` (e.g., `IRfqService`).
-- **Async Methods**: Suffix with `Async` (e.g., `GetByIdAsync`).
+| Banned | Use Instead |
+|--------|-------------|
+| AutoMapper | Manual mapping extensions |
+| FluentValidation | DataAnnotations or manual validation |
+| FluentAssertions | Standard xUnit `Assert.*` |
+| Swashbuckle/Swagger | Scalar (at `/quotation/scalar`) |
+| InMemoryDatabase (EF Core) | Testcontainers with real PostgreSQL |
 
-### Formatting
-- **Indentation**: 4 spaces.
-- **Braces**: Allman style (braces on new lines).
-- **Usings**: Place `using` directives at the top of the file. Remove unused usings.
+---
 
-### Architecture & Patterns
-- **Layering**:
-  - `Api`: Controllers, Middleware, DTOs, Application Services.
-  - `Data`: EF Core Entities, DbContext, Migrations.
-  - `Tests`: Unit and Integration tests.
-- **Dependency Injection**: Use constructor injection. Register services in `Program.cs` or extension methods.
-- **Data Access**: Use Entity Framework Core. Use `DbContext` directly or via Repositories (current pattern favors direct DbContext in Services).
-- **DTOs**: Use specific Request/Response DTOs. Do not expose Entities directly in API endpoints.
-- **Logging**: Use `ILogger<T>` injected into the constructor.
-- **Validation**: Validate inputs in Services using Data Annotations (`[Required]`, `[EmailAddress]`) or manual validation.
+## Testing Rules
 
-### Error Handling
-- Use global exception handling middleware (Standard Middleware).
-- Throw specific exceptions (e.g., `KeyNotFoundException` for missing resources).
-- Log exceptions with context before throwing or returning error responses.
-
-### Documentation
-- Use XML documentation (`///`) for public methods and classes, especially in Services and API contracts.
-
-### Testing
-- **Framework**: xUnit.
-- **Mocking**: Moq.
-- **Integration Tests**: Use `WebApplicationFactory` (via `IntegrationTestWebAppFactory`).
-- **Naming**: `MethodName_StateUnderTest_ExpectedBehavior`.
+- **Framework**: xUnit with standard `Assert` (`Assert.Equal`, `Assert.NotNull`, etc.)
+- **Mocking**: Moq for unit tests
+- **Naming**: `MethodName_StateUnderTest_ExpectedBehavior` or `HTTP_METHOD_Path_Scenario_ExpectedStatus`
+- **Coverage**: Minimum 80% per service
+- **Integration tests**: `BaseIntegrationTestFactory<TProgram, TDbContext>` with Testcontainers (PostgreSQL, Redis, RabbitMQ). Never InMemoryDatabase. Use `IntegrationTestWebAppFactory` for WebApplicationFactory setup.
+- **System tests** (Tier 3): `AspireTestFixture` with `[Collection("AspireDomainTests")]` — shared AppHost, never one per class
+- **Eventual consistency**: Use `TestHelpers.WaitForAsync`. Never `Task.Delay`
+- **MassTransit consumers**: Must have consumer tests using `AddMassTransitTestHarness()`
+- Use `[Fact]` for single cases, `[Theory]` for parameterized tests
 
 ### Testing Strategy (4-Tier Pyramid Context)
 
@@ -83,43 +113,50 @@ This service's tests cover **Tier 1 (Unit)** and **Tier 2 (Service Integration)*
 
 **Tier 3 (System Integration)** — cross-service workflows and event chains — is tested in `Maliev.Aspire.Tests/`.
 
-#### Key Rules
-- Use `BaseIntegrationTestFactory<TProgram, TDbContext>` for integration tests (real Testcontainers, never InMemoryDatabase)
-- Every MassTransit consumer MUST have a consumer test using `services.AddMassTransitTestHarness()`
-- Test naming: `MethodName_StateUnderTest_ExpectedBehavior`
-- Minimum 80% code coverage
-- Use `[Fact]` for single cases, `[Theory]` for parameterized tests
-
 > Full ecosystem test strategy: `Maliev.Aspire.Tests/TEST_PLAN.md`
 
+---
+
+## Mandatory Rules
+
+- **`TreatWarningsAsErrors = true`**: Zero warnings allowed. No suppression
+- **`[RequirePermission("quotation.resources.action")]`**: On all endpoints, not plain `[Authorize]`
+- **API versioning**: All routes versioned (`v1/`)
+- **Service prefix**: Routes prefixed with `/quotation`
+- **Scalar docs**: Configured at `/quotation/scalar`
+- **Secrets**: Never hardcoded. Use GCP Secret Manager or environment variables
+- **Async/await**: All the way down. Pass `CancellationToken`
+- **EF Core Design package**: Only in Infrastructure project, never in Api
+- **PostgreSQL xmin**: Shadow property only — `entity.Property<uint>("xmin").HasColumnType("xid").IsRowVersion()`. Never add entity property
+- **Temporary files**: Generate in `/temp` folder, clean up afterwards
+- **DTOs**: Use specific Request/Response DTOs. Do not expose Entities directly in API endpoints
+
+---
+
 ## Workflow
-1.  **Read**: Always read relevant files to understand context before editing.
-2.  **Edit**: Make atomic changes.
-3.  **Verify**: Run `dotnet build` and relevant tests after changes.
+1. **Read**: Always read relevant files to understand context before editing.
+2. **Edit**: Make atomic changes.
+3. **Verify**: Run `dotnet build Maliev.QuotationService.slnx` and relevant tests after changes.
 
+---
 
-## Git & Version Control — Mandatory Rules
+## Git Rules
 
-### 🚨 CRITICAL: Always Commit Code Changes (Non-Negotiable)
-- **You MUST commit your changes to the local repository after completing any meaningful unit of work.**
-- **Never accumulate uncommitted changes.** Do not wait until end of session or until something breaks.
-- **Commit early and often** — if a change is meaningful (even a small fix or refactor), commit it.
-- **You do NOT need to push to remote** — local commits are sufficient to protect against accidental loss.
-- **If you are unsure whether to commit, commit anyway.** Extra commits are harmless; lost work is irreversible.
-- This rule applies even if you are just "testing" or "exploring" — use git branches to isolate experimental work and commit those changes too.
+- Each `Maliev.*` folder is an independent git repo. `cd` into it before git commands
+- **Commit early and often** after every meaningful unit of work. Do not accumulate changes
+- **Never use `git checkout` to restore files** — commit first, then `git revert` or `git reset --soft`
+- Feature branches merged to `develop` via PR. Do not push without being asked
 
-### 🚨 CRITICAL: Never Use `git checkout` to Restore Broken Files
-- **NEVER use `git checkout` to restore or recover files.** This operation discards uncommitted changes permanently and will result in data loss.
-- **To undo/recover from broken files: first commit your current changes, then use `git revert` or `git reset --soft` to safely undo.**
+---
 
 ## Database & EF Core — Mandatory Rules
 
 ### EF Core Design Package
-- ❌ `Microsoft.EntityFrameworkCore.Design` MUST NOT be in Api projects
-- ✅ It belongs ONLY in the Infrastructure (or Data) project where migrations live
-- Migration commands must target Infrastructure as both project and startup-project (since EF Core Design package is in Infrastructure):
+- `Microsoft.EntityFrameworkCore.Design` MUST NOT be in Api projects
+- It belongs ONLY in the Infrastructure (or Data) project where migrations live
+- Migration commands must target Infrastructure as both project and startup-project:
   ```
-  dotnet ef migrations add <Name> --project Maliev.<Domain>Service.Infrastructure --startup-project Maliev.<Domain>Service.Infrastructure
+  dotnet ef migrations add <Name> --project Maliev.QuotationService.Infrastructure --startup-project Maliev.QuotationService.Infrastructure
   ```
 
 ### PostgreSQL xmin Concurrency — Mandatory Pattern
@@ -127,6 +164,6 @@ Use shadow property ONLY. Never add a Xmin/xmin property to domain entities.
 ```csharp
 entity.Property<uint>("xmin").HasColumnType("xid").IsRowVersion();
 ```
-- ❌ Never use `UseXminAsConcurrencyToken()` (removed in Npgsql EF v7)
-- ❌ Never use entity property `public uint Xmin { get; set; }` or `public uint xmin { get; set; }`
-- ❌ Never use `.Ignore(e => e.Xmin)` — remove the entity property instead
+- Never use `UseXminAsConcurrencyToken()` (removed in Npgsql EF v7)
+- Never use entity property `public uint Xmin { get; set; }` or `public uint xmin { get; set; }`
+- Never use `.Ignore(e => e.Xmin)` — remove the entity property instead
