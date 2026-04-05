@@ -7,9 +7,7 @@
       "launchBrowser": true,
       "launchUrl": "quotation/scalar",
       "applicationUrl": "http://localhost:6600",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      "environmentVariables": {}
     },
     "https": {
       "commandName": "Project",
@@ -17,9 +15,7 @@
       "launchBrowser": true,
       "launchUrl": "quotation/scalar",
       "applicationUrl": "https://localhost:8600;http://localhost:6600",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      "environmentVariables": {}
     }
   }
 }
