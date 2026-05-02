@@ -3,7 +3,9 @@ using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Domain.Enums;
+using Maliev.QuotationService.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.QuotationService.Api.Controllers.v1;
 
@@ -17,14 +19,19 @@ namespace Maliev.QuotationService.Api.Controllers.v1;
 public class MetricsController : ControllerBase
 {
     private readonly IQuotationService _quotationService;
+    private readonly QuotationDbContext _context;
     private readonly ILogger<MetricsController> _logger;
 
     /// <summary>
     /// Initializes a new instance of <see cref="MetricsController"/>.
     /// </summary>
-    public MetricsController(IQuotationService quotationService, ILogger<MetricsController> logger)
+    public MetricsController(
+        IQuotationService quotationService,
+        QuotationDbContext context,
+        ILogger<MetricsController> logger)
     {
         _quotationService = quotationService;
+        _context = context;
         _logger = logger;
     }
 
@@ -43,5 +50,30 @@ public class MetricsController : ControllerBase
             cancellationToken: cancellationToken);
 
         return Ok(new { count = totalCount });
+    }
+
+    /// <summary>
+    /// Get the count of quotations awaiting customer response past the configured age threshold.
+    /// </summary>
+    /// <param name="minAgeDays">Minimum age in days before a customer-review quotation is considered aging.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpGet("aging-count")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAgingCount(
+        [FromQuery] int minAgeDays = 7,
+        CancellationToken cancellationToken = default)
+    {
+        var effectiveMinAgeDays = Math.Max(0, minAgeDays);
+        var cutoff = DateTime.UtcNow.AddDays(-effectiveMinAgeDays);
+
+        var count = await _context.Quotations
+            .AsNoTracking()
+            .CountAsync(
+                q => q.Status == QuotationStatus.CustomerReview
+                    && !q.IsDeleted
+                    && q.UpdatedAt <= cutoff,
+                cancellationToken);
+
+        return Ok(new { count });
     }
 }
