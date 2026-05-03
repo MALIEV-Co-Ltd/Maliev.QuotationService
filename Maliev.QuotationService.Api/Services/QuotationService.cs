@@ -1,5 +1,6 @@
 using Maliev.MessagingContracts.Contracts.Quotations;
 using Maliev.MessagingContracts;
+using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
@@ -21,6 +22,7 @@ public class QuotationService : IQuotationService
     private readonly ILogger<QuotationService> _logger;
     private readonly MetricsService _metricsService;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly ICustomerServiceClient? _customerServiceClient;
 
     /// <summary>
     /// Initializes a new instance of the QuotationService.
@@ -29,16 +31,19 @@ public class QuotationService : IQuotationService
     /// <param name="logger">The logger.</param>
     /// <param name="metricsService">The metrics service.</param>
     /// <param name="publishEndpoint">The publish endpoint for messaging.</param>
+    /// <param name="customerServiceClient">The CustomerService client used to hydrate local customer references.</param>
     public QuotationService(
         QuotationDbContext context,
         ILogger<QuotationService> logger,
         MetricsService metricsService,
-        IPublishEndpoint publishEndpoint)
+        IPublishEndpoint publishEndpoint,
+        ICustomerServiceClient? customerServiceClient = null)
     {
         _context = context;
         _logger = logger;
         _metricsService = metricsService;
         _publishEndpoint = publishEndpoint;
+        _customerServiceClient = customerServiceClient;
     }
 
     /// <summary>
@@ -69,12 +74,7 @@ public class QuotationService : IQuotationService
     {
         _logger.LogInformation("Creating quotation for customer {CustomerId}", customerId);
 
-        // Verify customer exists
-        var customerExists = await _context.Customers.AnyAsync(c => c.Id == customerId, cancellationToken);
-        if (!customerExists)
-        {
-            throw new KeyNotFoundException($"Customer with ID {customerId} not found");
-        }
+        await EnsureCustomerReferenceAsync(customerId, cancellationToken);
 
         // Verify RFQ exists if provided
         if (sourceRfqId.HasValue)
@@ -659,6 +659,50 @@ public class QuotationService : IQuotationService
 
         _logger.LogInformation("Soft-deleted quotation {QuotationId}", quotationId);
     }
+
+    private async Task EnsureCustomerReferenceAsync(Guid customerId, CancellationToken cancellationToken)
+    {
+        var customerExists = await _context.Customers
+            .AnyAsync(c => c.Id == customerId && !c.IsDeleted, cancellationToken);
+        if (customerExists)
+            return;
+
+        if (_customerServiceClient is null)
+            throw new KeyNotFoundException($"Customer with ID {customerId} not found");
+
+        var customer = await _customerServiceClient.GetCustomerByIdAsync(customerId, cancellationToken);
+        if (customer is null)
+            throw new KeyNotFoundException($"Customer with ID {customerId} not found");
+
+        var customerName = FirstNonEmpty(
+            customer.Name,
+            $"{customer.FirstName} {customer.LastName}".Trim(),
+            customer.CompanyName,
+            customer.Email,
+            customerId.ToString("N"))!;
+
+        var phoneNumber = FirstNonEmpty(customer.Mobile, customer.Landline, customer.CompanyPhone);
+
+        _context.Customers.Add(new Customer
+        {
+            Id = customer.Id,
+            Email = customer.Email,
+            PhoneNumber = phoneNumber,
+            Name = customerName,
+            ContactInfo = JsonDocument.Parse(JsonSerializer.Serialize(new
+            {
+                customer.CompanyId,
+                customer.CompanyName
+            })),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string? FirstNonEmpty(params string?[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 
     private async Task<QuotationVersion> CreateVersionAsync(
         Guid quotationId,
