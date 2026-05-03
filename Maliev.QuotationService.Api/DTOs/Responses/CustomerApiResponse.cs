@@ -21,6 +21,31 @@ public class CustomerApiResponse
     public string LastName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Customer full display name
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Customer email address
+    /// </summary>
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Customer mobile phone number
+    /// </summary>
+    public string? Mobile { get; set; }
+
+    /// <summary>
+    /// Customer landline phone number
+    /// </summary>
+    public string? Landline { get; set; }
+
+    /// <summary>
+    /// Company phone number associated with the customer
+    /// </summary>
+    public string? CompanyPhone { get; set; }
+
+    /// <summary>
     /// Masked Thai National ID (last 2 digits only, for security)
     /// </summary>
     public string? ThaiNationalIdMasked { get; set; }

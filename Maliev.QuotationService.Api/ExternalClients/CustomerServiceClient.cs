@@ -31,7 +31,7 @@ public class CustomerServiceClient : ICustomerServiceClient
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/api/customers/{customerId}", cancellationToken);
+            var response = await _httpClient.GetAsync($"/customer/v1/customers/{customerId}", cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
