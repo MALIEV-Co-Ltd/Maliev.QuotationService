@@ -33,11 +33,13 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds external service clients to the service collection.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configuration">The configuration.</param>
+    /// <param name="builder">The host application builder.</param>
     /// <returns>The service collection.</returns>
-    public static IServiceCollection AddExternalServiceClients(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddExternalServiceClients(this IHostApplicationBuilder builder)
     {
+        var services = builder.Services;
+        var configuration = builder.Configuration;
+
         services.AddTransient<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
 
         services.AddServiceClient<IMaterialServiceClient, MaterialServiceClient>(configuration, "MaterialService")
@@ -52,8 +54,9 @@ public static class ServiceCollectionExtensions
         services.AddServiceClient<IPdfServiceClient, PdfServiceClient>(configuration, "PdfService")
             .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
 
-        services.AddServiceClient<ICustomerServiceClient, CustomerServiceClient>(configuration, "CustomerService")
-            .AddHttpMessageHandler<Maliev.QuotationService.Api.Middleware.HeaderForwardingHandler>();
+        builder.AddAuthenticatedServiceClient<ICustomerServiceClient, CustomerServiceClient>(
+            "CustomerService",
+            sourceServiceName: "quotation");
 
         return services;
     }

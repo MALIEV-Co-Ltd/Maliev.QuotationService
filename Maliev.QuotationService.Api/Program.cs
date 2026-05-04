@@ -54,7 +54,7 @@ try
 
     // Add external service clients with resilience
     builder.AddIAMServiceClient("quotation");
-    builder.Services.AddExternalServiceClients(builder.Configuration);
+    builder.AddExternalServiceClients();
 
     // Add authentication
     builder.AddJwtAuthentication();

@@ -44,6 +44,43 @@ public sealed class CustomerServiceClientTests
         Assert.Equal("+1 415 555 0142", customer.Mobile);
     }
 
+    [Fact]
+    public async Task GetCustomerByIdAsync_WhenCustomerServiceReturnsForbidden_ThrowsHttpRequestException()
+    {
+        var customerId = Guid.NewGuid();
+        using var handler = new RecordingHandler(new HttpResponseMessage(HttpStatusCode.Forbidden));
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://customer-service")
+        };
+
+        var logger = new Mock<ILogger<CustomerServiceClient>>();
+        var client = new CustomerServiceClient(httpClient, logger.Object);
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetCustomerByIdAsync(customerId));
+
+        Assert.Equal(HttpStatusCode.Forbidden, exception.StatusCode);
+        Assert.Equal($"/customer/v1/customers/{customerId}", handler.RequestUri?.PathAndQuery);
+    }
+
+    [Fact]
+    public async Task GetCustomerByIdAsync_WhenCustomerServiceRequestTimesOut_ThrowsTimeoutException()
+    {
+        var customerId = Guid.NewGuid();
+        using var handler = new ThrowingHandler(new TaskCanceledException("simulated timeout"));
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://customer-service")
+        };
+
+        var logger = new Mock<ILogger<CustomerServiceClient>>();
+        var client = new CustomerServiceClient(httpClient, logger.Object);
+
+        await Assert.ThrowsAsync<TimeoutException>(
+            () => client.GetCustomerByIdAsync(customerId));
+    }
+
     private sealed class RecordingHandler : HttpMessageHandler
     {
         private readonly HttpResponseMessage _response;
@@ -62,5 +99,20 @@ public sealed class CustomerServiceClientTests
             RequestUri = request.RequestUri;
             return Task.FromResult(_response);
         }
+    }
+
+    private sealed class ThrowingHandler : HttpMessageHandler
+    {
+        private readonly Exception _exception;
+
+        public ThrowingHandler(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromException<HttpResponseMessage>(_exception);
     }
 }

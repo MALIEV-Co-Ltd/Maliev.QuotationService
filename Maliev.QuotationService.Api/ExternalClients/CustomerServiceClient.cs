@@ -42,7 +42,10 @@ public class CustomerServiceClient : ICustomerServiceClient
                 }
 
                 _logger.LogError("Failed to fetch customer {CustomerId}: {StatusCode}", customerId, response.StatusCode);
-                return null;
+                throw new HttpRequestException(
+                    $"Customer Service returned {(int)response.StatusCode} {response.StatusCode} while fetching customer {customerId}.",
+                    null,
+                    response.StatusCode);
             }
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -50,10 +53,20 @@ public class CustomerServiceClient : ICustomerServiceClient
 
             return customer;
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Timed out while fetching customer {CustomerId}", customerId);
+            throw new TimeoutException($"Timed out while fetching customer {customerId} from Customer Service.");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Customer fetch for {CustomerId} was cancelled", customerId);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while fetching customer {CustomerId}", customerId);
-            return null;
+            throw;
         }
     }
 }
