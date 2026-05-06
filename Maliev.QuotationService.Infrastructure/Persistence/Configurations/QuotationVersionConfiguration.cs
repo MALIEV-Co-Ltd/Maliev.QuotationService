@@ -21,6 +21,9 @@ public class QuotationVersionConfiguration : IEntityTypeConfiguration<QuotationV
 
         builder.Property(v => v.TotalPrice).HasPrecision(18, 2).IsRequired();
         builder.Property(v => v.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(v => v.ManualDiscountAmount).HasPrecision(18, 2).IsRequired();
+        builder.Property(v => v.ShippingCost).HasPrecision(18, 2).IsRequired();
+        builder.Property(v => v.TaxAmount).HasPrecision(18, 2).IsRequired();
 
         builder.Property(v => v.DeliveryExpectations)
             .HasColumnType("jsonb");

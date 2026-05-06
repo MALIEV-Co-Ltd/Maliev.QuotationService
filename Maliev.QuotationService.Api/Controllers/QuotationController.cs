@@ -81,6 +81,10 @@ public class QuotationController : ControllerBase
                 currentUserId: currentUserId,
                 billingIdentityType: (Domain.Enums.BillingIdentityType)(int)request.BillingIdentityType,
                 discountStructure: request.DiscountStructure,
+                manualDiscountAmount: request.ManualDiscountAmount,
+                shippingCost: request.ShippingCost,
+                taxAmount: request.TaxAmount,
+                specialTerms: request.SpecialTerms,
                 cancellationToken: cancellationToken);
 
             // Reload with full data
@@ -202,10 +206,14 @@ public class QuotationController : ControllerBase
                 quotationId: id,
                 lineItems: request.LineItems,
                 changeSummary: request.ChangeSummary,
-                deliveryExpectations: request.DeliveryExpectations,
-                discountStructure: request.DiscountStructure,
-                currentUserId: currentUserId,
-                cancellationToken: cancellationToken);
+                  deliveryExpectations: request.DeliveryExpectations,
+                  discountStructure: request.DiscountStructure,
+                  manualDiscountAmount: request.ManualDiscountAmount,
+                  shippingCost: request.ShippingCost,
+                  taxAmount: request.TaxAmount,
+                  specialTerms: request.SpecialTerms,
+                  currentUserId: currentUserId,
+                  cancellationToken: cancellationToken);
 
             // Reload with full data
             var updated = await _quotationService.GetByIdAsync(id, cancellationToken);
@@ -471,6 +479,16 @@ public class QuotationController : ControllerBase
     {
         // Get current version number
         var currentVersion = quotation.Versions.FirstOrDefault(v => v.Id == quotation.CurrentVersionId);
+        var versions = quotation.Versions
+            .OrderBy(version => version.VersionNumber)
+            .Select(MapVersionToResponse)
+            .ToList();
+        var lineSubtotal = currentVersion?.LineItems.Sum(item => item.LineTotal) ?? 0m;
+        var currentDiscount = currentVersion?.DiscountStructures.FirstOrDefault();
+        var discountAmount = ResolveDiscountAmount(currentDiscount, lineSubtotal);
+        var manualDiscount = currentVersion?.ManualDiscountAmount ?? 0m;
+        var shippingCost = currentVersion?.ShippingCost ?? 0m;
+        var taxAmount = currentVersion?.TaxAmount ?? 0m;
 
         return new QuotationResponse
         {
@@ -486,8 +504,15 @@ public class QuotationController : ControllerBase
             SourceRfqId = quotation.SourceRfqId,
             CurrentVersionNumber = currentVersion?.VersionNumber ?? 0,
             Status = quotation.Status,
+            QuotationNumber = $"Q-{quotation.Id.ToString("N")[..8].ToUpperInvariant()}",
             ValidityPeriodStart = quotation.ValidityPeriodStart.ToDateTime(TimeOnly.MinValue),
             ValidityPeriodEnd = quotation.ValidityPeriodEnd.ToDateTime(TimeOnly.MinValue),
+            SubTotal = Math.Max(0m, lineSubtotal - discountAmount - manualDiscount + shippingCost),
+            Tax = taxAmount,
+            Total = currentVersion?.TotalPrice ?? 0m,
+            CurrencyCode = currentVersion?.CurrencyCode ?? "THB",
+            DeliveryExpectations = ParseDeliveryExpectations(currentVersion?.DeliveryExpectations),
+            Versions = versions,
             CreatedAt = quotation.CreatedAt,
             UpdatedAt = quotation.UpdatedAt
         };
@@ -509,6 +534,9 @@ public class QuotationController : ControllerBase
                 Notes = li.Notes
             }).ToList(),
             TotalPrice = version.TotalPrice,
+            ManualDiscountAmount = version.ManualDiscountAmount,
+            ShippingCost = version.ShippingCost,
+            TaxAmount = version.TaxAmount,
             CurrencyCode = version.CurrencyCode,
             DiscountStructure = version.DiscountStructures.FirstOrDefault() != null ? new DiscountStructureDto
             {
@@ -517,16 +545,39 @@ public class QuotationController : ControllerBase
                 Conditions = version.DiscountStructures.First().Conditions,
                 AuthorizationReason = version.DiscountStructures.First().AuthorizationReason
             } : null,
-            DeliveryExpectations = version.DeliveryExpectations != null
-                ? (version.DeliveryExpectations.RootElement.ValueKind == JsonValueKind.Object &&
-                   version.DeliveryExpectations.RootElement.TryGetProperty("expectations", out var exp)
-                    ? exp.GetString()
-                    : version.DeliveryExpectations.RootElement.GetRawText())
-                : null,
+            DeliveryExpectations = ParseDeliveryExpectations(version.DeliveryExpectations),
             ChangeSummary = version.ChangeSummary,
+            SpecialTerms = version.SpecialTerms,
             CreatedByUserId = version.CreatedByUserId,
             CreatedAt = version.CreatedAt
         };
+    }
+
+    private static string? ParseDeliveryExpectations(JsonDocument? deliveryExpectations)
+    {
+        if (deliveryExpectations is null)
+            return null;
+
+        return deliveryExpectations.RootElement.ValueKind == JsonValueKind.Object &&
+               deliveryExpectations.RootElement.TryGetProperty("expectations", out var expectations)
+            ? expectations.GetString()
+            : deliveryExpectations.RootElement.GetRawText();
+    }
+
+    private static decimal ResolveDiscountAmount(Domain.Entities.DiscountStructure? discount, decimal lineSubtotal)
+    {
+        if (discount is null || discount.DiscountValue <= 0m || lineSubtotal <= 0m)
+            return 0m;
+
+        var amount = discount.DiscountType switch
+        {
+            DiscountType.FixedAmount => discount.DiscountValue,
+            DiscountType.Percentage => decimal.Round(lineSubtotal * (discount.DiscountValue / 100m), 2, MidpointRounding.AwayFromZero),
+            DiscountType.VolumeBased => decimal.Round(lineSubtotal * (discount.DiscountValue / 100m), 2, MidpointRounding.AwayFromZero),
+            _ => 0m
+        };
+
+        return Math.Min(Math.Max(0m, amount), lineSubtotal);
     }
 }
 

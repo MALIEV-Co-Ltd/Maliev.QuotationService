@@ -58,6 +58,10 @@ public class QuotationService : IQuotationService
     /// <param name="currentUserId">The user ID creating the quotation.</param>
     /// <param name="billingIdentityType">The billing identity type.</param>
     /// <param name="discountStructure">The discount structure to apply, if any.</param>
+    /// <param name="manualDiscountAmount">The manual discount amount to apply.</param>
+    /// <param name="shippingCost">The shipping or delivery cost to apply.</param>
+    /// <param name="taxAmount">The VAT or tax amount to apply.</param>
+    /// <param name="specialTerms">Customer-facing special terms for generated PDFs.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The created quotation.</returns>
     public async Task<Quotation> CreateAsync(
@@ -70,6 +74,10 @@ public class QuotationService : IQuotationService
         string currentUserId,
         Domain.Enums.BillingIdentityType billingIdentityType = Domain.Enums.BillingIdentityType.Corporate,
         DiscountStructureDto? discountStructure = null,
+        decimal manualDiscountAmount = 0m,
+        decimal shippingCost = 0m,
+        decimal taxAmount = 0m,
+        string? specialTerms = null,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating quotation for customer {CustomerId}", customerId);
@@ -119,6 +127,10 @@ public class QuotationService : IQuotationService
                     deliveryExpectations,
                     currentUserId,
                     discountStructure,
+                    manualDiscountAmount,
+                    shippingCost,
+                    taxAmount,
+                    specialTerms,
                     "Initial version",
                     cancellationToken);
 
@@ -284,6 +296,10 @@ public class QuotationService : IQuotationService
     /// <param name="changeSummary">A summary of the changes.</param>
     /// <param name="deliveryExpectations">Updated delivery expectations.</param>
     /// <param name="discountStructure">The updated discount structure.</param>
+    /// <param name="manualDiscountAmount">The manual discount amount to apply.</param>
+    /// <param name="shippingCost">The shipping or delivery cost to apply.</param>
+    /// <param name="taxAmount">The VAT or tax amount to apply.</param>
+    /// <param name="specialTerms">Customer-facing special terms for generated PDFs.</param>
     /// <param name="currentUserId">The user ID making the update.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The updated quotation.</returns>
@@ -293,6 +309,10 @@ public class QuotationService : IQuotationService
         string changeSummary,
         string? deliveryExpectations = null,
         DiscountStructureDto? discountStructure = null,
+        decimal manualDiscountAmount = 0m,
+        decimal shippingCost = 0m,
+        decimal taxAmount = 0m,
+        string? specialTerms = null,
         string? currentUserId = null,
         CancellationToken cancellationToken = default)
     {
@@ -319,6 +339,10 @@ public class QuotationService : IQuotationService
                 deliveryExpectations,
                 currentUserId ?? "system",
                 discountStructure,
+                manualDiscountAmount,
+                shippingCost,
+                taxAmount,
+                specialTerms,
                 changeSummary,
                 cancellationToken);
 
@@ -711,6 +735,10 @@ public class QuotationService : IQuotationService
         string? deliveryExpectations,
         string createdByUserId,
         DiscountStructureDto? discountStructure,
+        decimal manualDiscountAmount,
+        decimal shippingCost,
+        decimal taxAmount,
+        string? specialTerms,
         string changeSummary,
         CancellationToken cancellationToken)
     {
@@ -724,6 +752,10 @@ public class QuotationService : IQuotationService
             ChangeSummary = changeSummary,
             TotalPrice = 0, // Will be calculated
             CurrencyCode = "THB",
+            ManualDiscountAmount = Math.Max(0m, manualDiscountAmount),
+            ShippingCost = Math.Max(0m, shippingCost),
+            TaxAmount = Math.Max(0m, taxAmount),
+            SpecialTerms = string.IsNullOrWhiteSpace(specialTerms) ? null : specialTerms,
             DeliveryExpectations = !string.IsNullOrEmpty(deliveryExpectations)
                 ? JsonDocument.Parse(JsonSerializer.Serialize(new { expectations = deliveryExpectations }))
                 : null
@@ -793,7 +825,9 @@ public class QuotationService : IQuotationService
             }
         }
 
-        version.TotalPrice = totalPrice;
+        var manualDiscount = Math.Min(Math.Max(0m, manualDiscountAmount), Math.Max(0m, totalPrice));
+        totalPrice = Math.Max(0m, totalPrice - manualDiscount);
+        version.TotalPrice = totalPrice + Math.Max(0m, shippingCost) + Math.Max(0m, taxAmount);
 
         return version;
     }

@@ -28,6 +28,21 @@ public class QuotationVersionResponse
     public decimal TotalPrice { get; set; }
 
     /// <summary>
+    /// Manual discount amount applied to this version.
+    /// </summary>
+    public decimal ManualDiscountAmount { get; set; }
+
+    /// <summary>
+    /// Shipping or delivery cost applied to this version.
+    /// </summary>
+    public decimal ShippingCost { get; set; }
+
+    /// <summary>
+    /// VAT or tax amount applied to this version.
+    /// </summary>
+    public decimal TaxAmount { get; set; }
+
+    /// <summary>
     /// The currency code.
     /// </summary>
     public string CurrencyCode { get; set; } = "THB";
@@ -46,6 +61,11 @@ public class QuotationVersionResponse
     /// A summary of changes in this version.
     /// </summary>
     public string? ChangeSummary { get; set; }
+
+    /// <summary>
+    /// Customer-facing special terms shown on generated PDFs.
+    /// </summary>
+    public string? SpecialTerms { get; set; }
 
     /// <summary>
     /// The user ID who created this version.

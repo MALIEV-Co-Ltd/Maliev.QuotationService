@@ -22,6 +22,10 @@ public interface IQuotationService
         string currentUserId,
         BillingIdentityType billingIdentityType = BillingIdentityType.Corporate,
         DiscountStructureDto? discountStructure = null,
+        decimal manualDiscountAmount = 0m,
+        decimal shippingCost = 0m,
+        decimal taxAmount = 0m,
+        string? specialTerms = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -52,6 +56,10 @@ public interface IQuotationService
         string changeSummary,
         string? deliveryExpectations = null,
         DiscountStructureDto? discountStructure = null,
+        decimal manualDiscountAmount = 0m,
+        decimal shippingCost = 0m,
+        decimal taxAmount = 0m,
+        string? specialTerms = null,
         string? currentUserId = null,
         CancellationToken cancellationToken = default);
 

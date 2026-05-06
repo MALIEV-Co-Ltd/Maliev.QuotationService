@@ -23,6 +23,26 @@ public class UpdateQuotationRequest
     public string? DeliveryExpectations { get; set; }
 
     /// <summary>
+    /// Manual discount amount entered for the quotation.
+    /// </summary>
+    public decimal ManualDiscountAmount { get; set; }
+
+    /// <summary>
+    /// Shipping or delivery cost applied to the quotation.
+    /// </summary>
+    public decimal ShippingCost { get; set; }
+
+    /// <summary>
+    /// VAT or tax amount calculated for the quotation.
+    /// </summary>
+    public decimal TaxAmount { get; set; }
+
+    /// <summary>
+    /// Customer-facing special terms shown on generated PDFs.
+    /// </summary>
+    public string? SpecialTerms { get; set; }
+
+    /// <summary>
     /// A summary of the changes made in this update.
     /// </summary>
     [Required]

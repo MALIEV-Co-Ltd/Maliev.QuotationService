@@ -13,6 +13,9 @@ public class QuotationVersion
     public decimal TotalPrice { get; set; }
     public string CurrencyCode { get; set; } = "USD";
     public JsonDocument? DeliveryExpectations { get; set; }
+    public decimal ManualDiscountAmount { get; set; }
+    public decimal ShippingCost { get; set; }
+    public decimal TaxAmount { get; set; }
     public string? SpecialTerms { get; set; }
 
     public Quotation Quotation { get; set; } = null!;
