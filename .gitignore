@@ -23,6 +23,7 @@ bld/
 *.swo
 *~
 *.user
+*.csproj.user
 *.suo
 *.userprefs
 *.userosscache
