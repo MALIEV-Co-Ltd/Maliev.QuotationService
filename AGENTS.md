@@ -121,6 +121,8 @@ This service's tests cover **Tier 1 (Unit)** and **Tier 2 (Service Integration)*
 
 - **`TreatWarningsAsErrors = true`**: Zero warnings allowed. No suppression
 - **`[RequirePermission("quotation.resources.action")]`**: On all endpoints, not plain `[Authorize]`
+- Customer-scoped tokens with `customer_id` or `customerId` must only see or mutate quotations/RFQs for that customer. Analytics, metrics, and customer merge/match endpoints are staff/service-only even when the caller has read permissions.
+- Before changing controllers, DTOs, BFF proxies, or downstream clients, verify request/response DTOs, JSON property names, messaging schemas, and tests that assert the actual wire shape.
 - **API versioning**: All routes versioned (`v1/`)
 - **Service prefix**: Routes prefixed with `/quotation`
 - **Scalar docs**: Configured at `/quotation/scalar`

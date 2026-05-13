@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Application.Authorization;
@@ -206,6 +207,76 @@ public class AuthorizationTests : BaseIntegrationTest
         Assert.NotNull(result);
     }
 
+    [Fact]
+    public async Task GetQuotations_WithCustomerScope_ReturnsOnlyScopedCustomerQuotations()
+    {
+        var scopedCustomer = await CreateTestCustomerAsync();
+        var otherCustomer = await CreateTestCustomerAsync();
+        var scopedQuotation = await CreateTestQuotationAsync(scopedCustomer);
+        var otherQuotation = await CreateTestQuotationAsync(otherCustomer);
+        using var client = CreateCustomerScopedClient(scopedCustomer.Id, QuotationPermissions.QuotationsRead);
+
+        var listResponse = await client.GetAsync("/quotation/v1/quotations");
+        var ownResponse = await client.GetAsync($"/quotation/v1/quotations/{scopedQuotation.Id}");
+        var otherResponse = await client.GetAsync($"/quotation/v1/quotations/{otherQuotation.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        var result = await listResponse.Content.ReadFromJsonAsync<PagedResponse<QuotationResponse>>();
+        Assert.NotNull(result);
+        var match = Assert.Single(result.Data);
+        Assert.Equal(scopedQuotation.Id, match.Id);
+        Assert.Equal(scopedCustomer.Id, match.CustomerId);
+        Assert.Equal(HttpStatusCode.OK, ownResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, otherResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateQuotation_WithCustomerScopeForDifferentCustomer_ReturnsForbidden()
+    {
+        var scopedCustomer = await CreateTestCustomerAsync();
+        var otherCustomer = await CreateTestCustomerAsync();
+        using var client = CreateCustomerScopedClient(scopedCustomer.Id, QuotationPermissions.QuotationsCreate);
+        var request = CreateValidQuotationRequest(otherCustomer.Id);
+
+        var response = await client.PostAsJsonAsync("/quotation/v1/quotations", request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRfqs_WithCustomerScope_ReturnsOnlyScopedCustomerRfqs()
+    {
+        var scopedCustomer = await CreateTestCustomerAsync();
+        var otherCustomer = await CreateTestCustomerAsync();
+        var scopedRfq = await CreateTestRfqAsync(scopedCustomer);
+        var otherRfq = await CreateTestRfqAsync(otherCustomer);
+        using var client = CreateCustomerScopedClient(scopedCustomer.Id, QuotationPermissions.QuotationsRead);
+
+        var listResponse = await client.GetAsync("/quotation/v1/rfqs");
+        var ownResponse = await client.GetAsync($"/quotation/v1/rfqs/{scopedRfq.Id}");
+        var otherResponse = await client.GetAsync($"/quotation/v1/rfqs/{otherRfq.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        var result = await listResponse.Content.ReadFromJsonAsync<PagedResponse<RfqResponse>>();
+        Assert.NotNull(result);
+        var match = Assert.Single(result.Data);
+        Assert.Equal(scopedRfq.Id, match.Id);
+        Assert.Equal(scopedCustomer.Id, match.Customer.Id);
+        Assert.Equal(HttpStatusCode.OK, ownResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, otherResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Analytics_WithCustomerScope_ReturnsForbidden()
+    {
+        var scopedCustomer = await CreateTestCustomerAsync();
+        using var client = CreateCustomerScopedClient(scopedCustomer.Id, QuotationPermissions.QuotationsRead);
+
+        var response = await client.GetAsync("/quotation/v1/analytics/conversion-rates");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private async Task<Customer> CreateTestCustomerAsync()
     {
         var customer = new Customer
@@ -221,9 +292,9 @@ public class AuthorizationTests : BaseIntegrationTest
         return customer;
     }
 
-    private async Task<Quotation> CreateTestQuotationAsync()
+    private async Task<Quotation> CreateTestQuotationAsync(Customer? customer = null)
     {
-        var customer = await CreateTestCustomerAsync();
+        customer ??= await CreateTestCustomerAsync();
         var quotation = new Quotation
         {
             Id = Guid.NewGuid(),
@@ -237,6 +308,37 @@ public class AuthorizationTests : BaseIntegrationTest
         DbContext.Quotations.Add(quotation);
         await DbContext.SaveChangesAsync();
         return quotation;
+    }
+
+    private async Task<Rfq> CreateTestRfqAsync(Customer customer)
+    {
+        var rfq = new Rfq
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Customer = customer,
+            ChannelSource = RfqChannel.Website,
+            Status = RfqStatus.New,
+            RequestDetails = System.Text.Json.JsonDocument.Parse("""{"message":"test"}"""),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        DbContext.Rfqs.Add(rfq);
+        await DbContext.SaveChangesAsync();
+        return rfq;
+    }
+
+    private HttpClient CreateCustomerScopedClient(Guid customerId, params string[] permissions)
+    {
+        var token = Factory.CreateTestJwtToken(
+            "customer-user",
+            roles: new[] { "roles.quotation.viewer" },
+            permissions: permissions,
+            additionalClaims: new[] { new Claim("customer_id", customerId.ToString()) });
+
+        var client = Factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        return client;
     }
 
     private Maliev.QuotationService.Api.DTOs.Requests.CreateQuotationRequest CreateValidQuotationRequest(Guid customerId)

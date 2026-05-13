@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.QuotationService.Api.Authorization;
 using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -42,6 +43,8 @@ public class CustomerController : ControllerBase
         [FromBody] GetCustomerMatchesRequest request,
         CancellationToken cancellationToken)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         var matches = await _matchingService.GetMatchSuggestionsAsync(
             request.Email, request.PhoneNumber, request.Name, cancellationToken);
 
@@ -57,6 +60,8 @@ public class CustomerController : ControllerBase
         [FromBody] LinkCustomerRequest request,
         CancellationToken cancellationToken)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -81,6 +86,8 @@ public class CustomerController : ControllerBase
         [FromBody] LinkCustomerRequest request,
         CancellationToken cancellationToken)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try

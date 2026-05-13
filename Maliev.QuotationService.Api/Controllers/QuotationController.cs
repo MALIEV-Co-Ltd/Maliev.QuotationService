@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Maliev.QuotationService.Api.Authorization;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Application.Authorization;
@@ -67,6 +68,20 @@ public class QuotationController : ControllerBase
         [FromBody] CreateQuotationRequest request,
         CancellationToken cancellationToken)
     {
+        if (IsOutsideCustomerScope(request.CustomerId)) return Forbid();
+        if (request.SourceRfqId.HasValue)
+        {
+            var rfq = await _context.Rfqs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == request.SourceRfqId.Value, cancellationToken);
+            if (rfq is null)
+            {
+                return NotFound(new { message = $"RFQ with ID {request.SourceRfqId.Value} not found" });
+            }
+
+            if (IsOutsideCustomerScope(rfq.CustomerId)) return Forbid();
+        }
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -124,6 +139,16 @@ public class QuotationController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out var scopedCustomerId))
+        {
+            if (customerId.HasValue && customerId.Value != scopedCustomerId)
+            {
+                return Forbid();
+            }
+
+            customerId = scopedCustomerId;
+        }
+
         var (quotations, totalCount) = await _quotationService.GetAllAsync(
             status: status,
             customerId: customerId,
@@ -174,6 +199,7 @@ public class QuotationController : ControllerBase
         {
             return NotFound(new { message = $"Quotation with ID {id} not found" });
         }
+        if (IsOutsideCustomerScope(quotation.CustomerId)) return Forbid();
 
         var response = await MapToResponseAsync(quotation, cancellationToken);
 
@@ -198,6 +224,9 @@ public class QuotationController : ControllerBase
         [FromBody] UpdateQuotationRequest request,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -250,6 +279,9 @@ public class QuotationController : ControllerBase
         [FromBody] UpdateQuotationStatusRequest request,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -298,6 +330,9 @@ public class QuotationController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -340,6 +375,9 @@ public class QuotationController : ControllerBase
         [FromBody] AddInternalNoteRequest request,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -378,6 +416,9 @@ public class QuotationController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var versions = await _quotationService.GetVersionsAsync(id, cancellationToken);
 
         if (!versions.Any())
@@ -407,6 +448,9 @@ public class QuotationController : ControllerBase
         int versionNumber,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var version = await _quotationService.GetVersionByNumberAsync(id, versionNumber, cancellationToken);
 
         if (version == null)
@@ -436,6 +480,9 @@ public class QuotationController : ControllerBase
         [FromQuery] int? versionNumber = null,
         CancellationToken cancellationToken = default)
     {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         try
         {
             var pdfBytes = await _quotationService.GeneratePdfAsync(id, versionNumber, cancellationToken);
@@ -464,6 +511,9 @@ public class QuotationController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         try
         {
             await _quotationService.DeleteAsync(id, cancellationToken);
@@ -579,6 +629,27 @@ public class QuotationController : ControllerBase
 
         return Math.Min(Math.Max(0m, amount), lineSubtotal);
     }
+
+    private async Task<ActionResult?> EnsureQuotationInCustomerScopeAsync(Guid quotationId, CancellationToken cancellationToken)
+    {
+        if (!CustomerClaimScope.TryGetCustomerId(User, out var scopedCustomerId))
+        {
+            return null;
+        }
+
+        var quotation = await _context.Quotations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == quotationId, cancellationToken);
+        if (quotation is null)
+        {
+            return NotFound(new { message = $"Quotation with ID {quotationId} not found" });
+        }
+
+        return quotation.CustomerId == scopedCustomerId ? null : Forbid();
+    }
+
+    private bool IsOutsideCustomerScope(Guid customerId) =>
+        CustomerClaimScope.TryGetCustomerId(User, out var scopedCustomerId) && customerId != scopedCustomerId;
 }
 
 /// <summary>

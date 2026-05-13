@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.QuotationService.Api.Authorization;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
 using Maliev.QuotationService.Application.Authorization;
@@ -54,6 +55,8 @@ public class RfqController : ControllerBase
         [FromBody] CreateRfqRequest request,
         CancellationToken cancellationToken)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         // RFQ and Customer creation is now atomic within the service
@@ -91,6 +94,16 @@ public class RfqController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out var scopedCustomerId))
+        {
+            if (customerId.HasValue && customerId.Value != scopedCustomerId)
+            {
+                return Forbid();
+            }
+
+            customerId = scopedCustomerId;
+        }
+
         var (rfqs, totalCount) = await _rfqService.GetAllAsync(
             channelSource: channel,
             status: status,
@@ -133,6 +146,7 @@ public class RfqController : ControllerBase
         {
             return NotFound(new { message = $"RFQ with ID {id} not found" });
         }
+        if (IsOutsideCustomerScope(rfq.CustomerId)) return Forbid();
 
         var response = MapToResponse(rfq, rfq.Customer);
 
@@ -151,6 +165,9 @@ public class RfqController : ControllerBase
         [FromBody] UpdateRfqRequest request,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureRfqInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -187,6 +204,9 @@ public class RfqController : ControllerBase
         [FromBody] UpdateRfqStatusRequest request,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureRfqInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -225,6 +245,9 @@ public class RfqController : ControllerBase
         [FromBody] AddInternalNoteRequest request,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureRfqInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -263,6 +286,9 @@ public class RfqController : ControllerBase
         [FromBody] AssignRfqRequest request,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureRfqInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -296,6 +322,9 @@ public class RfqController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
+        var scopeResult = await EnsureRfqInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
         try
@@ -330,4 +359,25 @@ public class RfqController : ControllerBase
             UpdatedAt = rfq.UpdatedAt
         };
     }
+
+    private async Task<ActionResult?> EnsureRfqInCustomerScopeAsync(Guid rfqId, CancellationToken cancellationToken)
+    {
+        if (!CustomerClaimScope.TryGetCustomerId(User, out var scopedCustomerId))
+        {
+            return null;
+        }
+
+        var rfq = await _context.Rfqs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == rfqId, cancellationToken);
+        if (rfq is null)
+        {
+            return NotFound(new { message = $"RFQ with ID {rfqId} not found" });
+        }
+
+        return rfq.CustomerId == scopedCustomerId ? null : Forbid();
+    }
+
+    private bool IsOutsideCustomerScope(Guid customerId) =>
+        CustomerClaimScope.TryGetCustomerId(User, out var scopedCustomerId) && customerId != scopedCustomerId;
 }

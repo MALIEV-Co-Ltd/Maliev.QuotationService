@@ -101,6 +101,10 @@ All endpoints are prefixed with `/quotation/v1/`.
 | POST | `/quotations/{id}/convert-to-order` | Finalize conversion to a production order |
 | GET | `/templates` | Access reusable quote templates and standard configurations |
 
+### Permission Model
+
+Quotation permissions are staff/service permissions by default. Tokens that carry a `customer_id` or `customerId` claim are customer-scoped: quotation and RFQ list requests are forced to that customer, object routes return `403` outside that customer, and operational analytics/customer-merge endpoints reject customer-scoped tokens. Customer-facing flows should use a BFF/portal session that carries the customer claim and should not grant unrestricted quotation roles.
+
 ---
 
 ## 🏥 Health & Monitoring

@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.QuotationService.Api.Authorization;
 using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Domain.Enums;
@@ -41,6 +42,8 @@ public class AnalyticsController : ControllerBase
         [FromQuery] RfqChannel? channel = null,
         CancellationToken cancellationToken = default)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         var report = await _analyticsService.GetConversionRatesByChannelAsync(channel, cancellationToken);
         return Ok(report);
     }
@@ -55,6 +58,8 @@ public class AnalyticsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken cancellationToken = default)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         var report = await _analyticsService.GetAverageTurnaroundTimeAsync(fromDate, toDate, cancellationToken);
         return Ok(report);
     }
@@ -68,6 +73,8 @@ public class AnalyticsController : ControllerBase
         [FromQuery] int thresholdDays = 30,
         CancellationToken cancellationToken = default)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         var report = await _analyticsService.GetAbandonedRfqsAsync(thresholdDays, cancellationToken);
         return Ok(report);
     }

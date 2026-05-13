@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.QuotationService.Api.Authorization;
 using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Domain.Enums;
@@ -42,6 +43,8 @@ public class MetricsController : ControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPendingCount(CancellationToken cancellationToken)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         // Use GetAllAsync with status filter to count pending quotations
         var (quotations, totalCount) = await _quotationService.GetAllAsync(
             status: QuotationStatus.PendingApproval,
@@ -63,6 +66,8 @@ public class MetricsController : ControllerBase
         [FromQuery] int minAgeDays = 7,
         CancellationToken cancellationToken = default)
     {
+        if (CustomerClaimScope.TryGetCustomerId(User, out _)) return Forbid();
+
         var effectiveMinAgeDays = Math.Max(0, minAgeDays);
         var cutoff = DateTime.UtcNow.AddDays(-effectiveMinAgeDays);
 
