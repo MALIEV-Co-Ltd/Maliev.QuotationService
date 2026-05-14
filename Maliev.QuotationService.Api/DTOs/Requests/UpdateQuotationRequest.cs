@@ -46,6 +46,23 @@ public class UpdateQuotationRequest
     /// A summary of the changes made in this update.
     /// </summary>
     [Required]
-    [StringLength(500)]
+    [StringLength(1000)]
     public string ChangeSummary { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Immutable JSON snapshot of the project state used to create the new version.
+    /// </summary>
+    public string? ProjectSnapshotJson { get; set; }
+
+    /// <summary>
+    /// Deterministic hash of the immutable project snapshot.
+    /// </summary>
+    [StringLength(128)]
+    public string? ProjectSnapshotHash { get; set; }
+
+    /// <summary>
+    /// Human-readable display name for the user who generated this version.
+    /// </summary>
+    [StringLength(256)]
+    public string? GeneratedByDisplayName { get; set; }
 }

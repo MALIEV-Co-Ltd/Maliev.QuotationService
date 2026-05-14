@@ -185,6 +185,8 @@ public class QuotationServiceTests : BaseIntegrationTest
             quotationId: quotation.Id,
             lineItems: newLineItems,
             changeSummary: "Updated quantities and pricing",
+            projectSnapshotJson: """{"projectNumber":"PRJ-002","parts":[{"quantity":20}]}""",
+            generatedByDisplayName: "Natt Quoter",
             currentUserId: "test-user"
         );
 
@@ -198,5 +200,9 @@ public class QuotationServiceTests : BaseIntegrationTest
 
         Assert.Equal(2, savedQuotation!.Versions.Count);
         Assert.Contains(savedQuotation.Versions, v => v.VersionNumber == 2);
+        var secondVersion = savedQuotation.Versions.Single(v => v.VersionNumber == 2);
+        Assert.NotNull(secondVersion.ProjectSnapshotJson);
+        Assert.NotNull(secondVersion.ProjectSnapshotHash);
+        Assert.Equal("Natt Quoter", secondVersion.GeneratedByDisplayName);
     }
 }

@@ -21,11 +21,17 @@ public interface IQuotationService
         string? deliveryExpectations,
         string currentUserId,
         BillingIdentityType billingIdentityType = BillingIdentityType.Corporate,
+        Guid? sourceProjectId = null,
+        string? sourceProjectNumber = null,
         DiscountStructureDto? discountStructure = null,
         decimal manualDiscountAmount = 0m,
         decimal shippingCost = 0m,
         decimal taxAmount = 0m,
         string? specialTerms = null,
+        string? projectSnapshotJson = null,
+        string? projectSnapshotHash = null,
+        string? generatedByDisplayName = null,
+        string? changeSummary = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -60,7 +66,21 @@ public interface IQuotationService
         decimal shippingCost = 0m,
         decimal taxAmount = 0m,
         string? specialTerms = null,
+        string? projectSnapshotJson = null,
+        string? projectSnapshotHash = null,
+        string? generatedByDisplayName = null,
         string? currentUserId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Attaches a generated PDF artifact to a specific quotation version.
+    /// </summary>
+    Task<QuotationVersion> AttachVersionPdfArtifactAsync(
+        Guid quotationId,
+        int versionNumber,
+        string? pdfArtifactUrl,
+        string? pdfArtifactStoragePath,
+        DateTime? pdfGeneratedAt,
         CancellationToken cancellationToken = default);
 
     /// <summary>

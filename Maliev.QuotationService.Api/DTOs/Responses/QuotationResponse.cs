@@ -28,6 +28,16 @@ public class QuotationResponse
     public Guid? SourceRfqId { get; set; }
 
     /// <summary>
+    /// The source ProjectService project identifier when this quotation was generated from a project workspace.
+    /// </summary>
+    public Guid? SourceProjectId { get; set; }
+
+    /// <summary>
+    /// The source ProjectService project number when this quotation was generated from a project workspace.
+    /// </summary>
+    public string? SourceProjectNumber { get; set; }
+
+    /// <summary>
     /// The current version number of the quotation.
     /// </summary>
     public int CurrentVersionNumber { get; set; }

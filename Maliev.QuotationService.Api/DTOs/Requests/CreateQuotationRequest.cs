@@ -27,6 +27,17 @@ public class CreateQuotationRequest
     public Guid? SourceRfqId { get; set; }
 
     /// <summary>
+    /// The source ProjectService project identifier when this quotation is generated from a project workspace.
+    /// </summary>
+    public Guid? SourceProjectId { get; set; }
+
+    /// <summary>
+    /// The source ProjectService project number when this quotation is generated from a project workspace.
+    /// </summary>
+    [StringLength(64)]
+    public string? SourceProjectNumber { get; set; }
+
+    /// <summary>
     /// The start date of the quotation validity period.
     /// </summary>
     public DateTime ValidityPeriodStart { get; set; }
@@ -72,4 +83,27 @@ public class CreateQuotationRequest
     /// Customer-facing special terms shown on generated PDFs.
     /// </summary>
     public string? SpecialTerms { get; set; }
+
+    /// <summary>
+    /// Immutable JSON snapshot of the project state used to create version 1.
+    /// </summary>
+    public string? ProjectSnapshotJson { get; set; }
+
+    /// <summary>
+    /// Deterministic hash of the immutable project snapshot.
+    /// </summary>
+    [StringLength(128)]
+    public string? ProjectSnapshotHash { get; set; }
+
+    /// <summary>
+    /// Human-readable display name for the user who generated this version.
+    /// </summary>
+    [StringLength(256)]
+    public string? GeneratedByDisplayName { get; set; }
+
+    /// <summary>
+    /// Optional change summary for the first version.
+    /// </summary>
+    [StringLength(1000)]
+    public string? ChangeSummary { get; set; }
 }

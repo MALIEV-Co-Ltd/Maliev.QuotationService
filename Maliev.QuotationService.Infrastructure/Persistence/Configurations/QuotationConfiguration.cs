@@ -34,6 +34,10 @@ public class QuotationConfiguration : IEntityTypeConfiguration<Quotation>
 
         builder.HasIndex(q => q.SourceRfqId);
 
+        builder.Property(q => q.SourceProjectNumber).HasMaxLength(64);
+        builder.HasIndex(q => q.SourceProjectId);
+        builder.HasIndex(q => q.SourceProjectNumber);
+
         builder.HasOne(q => q.CurrentVersion)
             .WithMany()
             .HasForeignKey(q => q.CurrentVersionId)

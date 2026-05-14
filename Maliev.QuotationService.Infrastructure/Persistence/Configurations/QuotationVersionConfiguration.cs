@@ -18,6 +18,11 @@ public class QuotationVersionConfiguration : IEntityTypeConfiguration<QuotationV
         builder.Property(v => v.CreatedAt).HasDefaultValueSql("NOW()");
 
         builder.Property(v => v.ChangeSummary).HasMaxLength(1000);
+        builder.Property(v => v.ProjectSnapshotJson).HasColumnType("jsonb");
+        builder.Property(v => v.ProjectSnapshotHash).HasMaxLength(128);
+        builder.Property(v => v.PdfArtifactUrl).HasMaxLength(2048);
+        builder.Property(v => v.PdfArtifactStoragePath).HasMaxLength(1024);
+        builder.Property(v => v.GeneratedByDisplayName).HasMaxLength(256);
 
         builder.Property(v => v.TotalPrice).HasPrecision(18, 2).IsRequired();
         builder.Property(v => v.CurrencyCode).HasMaxLength(3).IsRequired();

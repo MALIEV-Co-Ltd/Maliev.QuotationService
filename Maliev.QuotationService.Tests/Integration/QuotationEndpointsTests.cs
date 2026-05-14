@@ -28,6 +28,7 @@ public class QuotationEndpointsTests : BaseIntegrationTest
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
+        var sourceProjectId = Guid.NewGuid();
 
         DbContext.Customers.Add(customer);
         await DbContext.SaveChangesAsync();
@@ -35,6 +36,8 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         var request = new CreateQuotationRequest
         {
             CustomerId = customer.Id,
+            SourceProjectId = sourceProjectId,
+            SourceProjectNumber = "PRJ-20260514-001",
             ValidityPeriodStart = DateTime.UtcNow,
             ValidityPeriodEnd = DateTime.UtcNow.AddDays(30),
             LineItems = new List<QuotationLineItemDto>
@@ -48,7 +51,10 @@ public class QuotationEndpointsTests : BaseIntegrationTest
                     ManufacturingProcess = "CNC Machining"
                 }
             },
-            DeliveryExpectations = "2-3 weeks"
+            DeliveryExpectations = "2-3 weeks",
+            ProjectSnapshotJson = $$"""{"projectId":"{{sourceProjectId}}","parts":[{"quantity":100}]}""",
+            GeneratedByDisplayName = "Quoting Specialist",
+            ChangeSummary = "Initial project quote snapshot"
         };
 
         using var authenticatedClient = CreateAuthenticatedClient();
@@ -63,8 +69,14 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         Assert.NotNull(quotationResponse);
         Assert.NotEqual(Guid.Empty, quotationResponse.Id);
         Assert.Equal(customer.Id, quotationResponse.CustomerId);
+        Assert.Equal(sourceProjectId, quotationResponse.SourceProjectId);
+        Assert.Equal("PRJ-20260514-001", quotationResponse.SourceProjectNumber);
         Assert.Equal(QuotationStatus.Draft, quotationResponse.Status);
         Assert.Equal(1, quotationResponse.CurrentVersionNumber);
+        Assert.Single(quotationResponse.Versions);
+        Assert.Equal("Initial project quote snapshot", quotationResponse.Versions[0].ChangeSummary);
+        Assert.NotNull(quotationResponse.Versions[0].ProjectSnapshotHash);
+        Assert.Equal("Quoting Specialist", quotationResponse.Versions[0].GeneratedByDisplayName);
 
         // Verify database persistence
         var savedQuotation = await DbContext.Quotations
@@ -73,8 +85,83 @@ public class QuotationEndpointsTests : BaseIntegrationTest
             .FirstOrDefaultAsync(q => q.Id == quotationResponse.Id);
 
         Assert.NotNull(savedQuotation);
+        Assert.Equal(sourceProjectId, savedQuotation.SourceProjectId);
+        Assert.Equal("PRJ-20260514-001", savedQuotation.SourceProjectNumber);
         Assert.Single(savedQuotation.Versions);
         Assert.Single(savedQuotation.Versions.First().LineItems);
+        Assert.NotNull(savedQuotation.Versions.First().ProjectSnapshotJson);
+        Assert.NotNull(savedQuotation.Versions.First().ProjectSnapshotHash);
+    }
+
+    [Fact]
+    public async Task AttachQuotationVersionPdfArtifact_ExistingVersion_PersistsArtifactOnExactVersion()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = "pdf-version@example.com",
+            Name = "PDF Version Customer",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var quotation = new Quotation
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Status = QuotationStatus.Draft,
+            ValidityPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
+            ValidityPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var version = new QuotationVersion
+        {
+            Id = Guid.NewGuid(),
+            QuotationId = quotation.Id,
+            VersionNumber = 1,
+            CreatedByUserId = "quote-user",
+            TotalPrice = 1200m,
+            CurrencyCode = "THB",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        DbContext.Customers.Add(customer);
+        DbContext.Quotations.Add(quotation);
+        DbContext.QuotationVersions.Add(version);
+        await DbContext.SaveChangesAsync();
+
+        quotation.CurrentVersionId = version.Id;
+        await DbContext.SaveChangesAsync();
+
+        using var authenticatedClient = CreateAuthenticatedClient();
+        var generatedAt = DateTime.UtcNow;
+
+        // Act
+        var response = await authenticatedClient.PostAsJsonAsync(
+            $"/quotation/v1/quotations/{quotation.Id}/versions/1/pdf-artifact",
+            new AttachQuotationVersionPdfRequest
+            {
+                PdfArtifactUrl = "https://files.maliev.com/quotation-v1.pdf",
+                PdfArtifactStoragePath = "quotations/version-1.pdf",
+                PdfGeneratedAt = generatedAt
+            });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<QuotationVersionResponse>();
+        Assert.NotNull(body);
+        Assert.Equal(1, body.VersionNumber);
+        Assert.Equal("https://files.maliev.com/quotation-v1.pdf", body.PdfArtifactUrl);
+        Assert.Equal("quotations/version-1.pdf", body.PdfArtifactStoragePath);
+        Assert.NotNull(body.PdfGeneratedAt);
+
+        DbContext.Entry(version).State = EntityState.Detached;
+        var savedVersion = await DbContext.QuotationVersions.FindAsync(version.Id);
+        Assert.Equal("https://files.maliev.com/quotation-v1.pdf", savedVersion!.PdfArtifactUrl);
+        Assert.Equal("quotations/version-1.pdf", savedVersion.PdfArtifactStoragePath);
     }
 
     [Fact]

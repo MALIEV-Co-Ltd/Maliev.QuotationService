@@ -9,6 +9,8 @@ using Maliev.QuotationService.Domain.Entities;
 using Maliev.QuotationService.Domain.Enums;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace Maliev.QuotationService.Api.Services;
@@ -57,11 +59,17 @@ public class QuotationService : IQuotationService
     /// <param name="deliveryExpectations">Delivery expectations or notes.</param>
     /// <param name="currentUserId">The user ID creating the quotation.</param>
     /// <param name="billingIdentityType">The billing identity type.</param>
+    /// <param name="sourceProjectId">The source project identifier when generated from ProjectService.</param>
+    /// <param name="sourceProjectNumber">The source project number when generated from ProjectService.</param>
     /// <param name="discountStructure">The discount structure to apply, if any.</param>
     /// <param name="manualDiscountAmount">The manual discount amount to apply.</param>
     /// <param name="shippingCost">The shipping or delivery cost to apply.</param>
     /// <param name="taxAmount">The VAT or tax amount to apply.</param>
     /// <param name="specialTerms">Customer-facing special terms for generated PDFs.</param>
+    /// <param name="projectSnapshotJson">Immutable JSON project snapshot for the quotation version.</param>
+    /// <param name="projectSnapshotHash">Deterministic hash of the immutable project snapshot.</param>
+    /// <param name="generatedByDisplayName">Human-readable display name for the user who generated this version.</param>
+    /// <param name="changeSummary">Optional change summary for the first version.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The created quotation.</returns>
     public async Task<Quotation> CreateAsync(
@@ -73,11 +81,17 @@ public class QuotationService : IQuotationService
         string? deliveryExpectations,
         string currentUserId,
         Domain.Enums.BillingIdentityType billingIdentityType = Domain.Enums.BillingIdentityType.Corporate,
+        Guid? sourceProjectId = null,
+        string? sourceProjectNumber = null,
         DiscountStructureDto? discountStructure = null,
         decimal manualDiscountAmount = 0m,
         decimal shippingCost = 0m,
         decimal taxAmount = 0m,
         string? specialTerms = null,
+        string? projectSnapshotJson = null,
+        string? projectSnapshotHash = null,
+        string? generatedByDisplayName = null,
+        string? changeSummary = null,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating quotation for customer {CustomerId}", customerId);
@@ -106,6 +120,8 @@ public class QuotationService : IQuotationService
                     Id = Guid.NewGuid(),
                     CustomerId = customerId,
                     SourceRfqId = sourceRfqId,
+                    SourceProjectId = sourceProjectId,
+                    SourceProjectNumber = string.IsNullOrWhiteSpace(sourceProjectNumber) ? null : sourceProjectNumber.Trim(),
                     Status = QuotationStatus.Draft,
                     BillingIdentityType = billingIdentityType,
                     ValidityPeriodStart = DateOnly.FromDateTime(validityPeriodStart),
@@ -131,7 +147,10 @@ public class QuotationService : IQuotationService
                     shippingCost,
                     taxAmount,
                     specialTerms,
-                    "Initial version",
+                    projectSnapshotJson,
+                    projectSnapshotHash,
+                    generatedByDisplayName,
+                    string.IsNullOrWhiteSpace(changeSummary) ? "Initial version" : changeSummary.Trim(),
                     cancellationToken);
 
                 // Now update the quotation with the current version ID
@@ -162,6 +181,8 @@ public class QuotationService : IQuotationService
                     {
                         CustomerId = customerId,
                         SourceRfqId = sourceRfqId,
+                        SourceProjectId = sourceProjectId,
+                        SourceProjectNumber = sourceProjectNumber,
                         Status = QuotationStatus.Draft.ToString()
                     }))
                 };
@@ -300,6 +321,9 @@ public class QuotationService : IQuotationService
     /// <param name="shippingCost">The shipping or delivery cost to apply.</param>
     /// <param name="taxAmount">The VAT or tax amount to apply.</param>
     /// <param name="specialTerms">Customer-facing special terms for generated PDFs.</param>
+    /// <param name="projectSnapshotJson">Immutable JSON project snapshot for the quotation version.</param>
+    /// <param name="projectSnapshotHash">Deterministic hash of the immutable project snapshot.</param>
+    /// <param name="generatedByDisplayName">Human-readable display name for the user who generated this version.</param>
     /// <param name="currentUserId">The user ID making the update.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The updated quotation.</returns>
@@ -313,6 +337,9 @@ public class QuotationService : IQuotationService
         decimal shippingCost = 0m,
         decimal taxAmount = 0m,
         string? specialTerms = null,
+        string? projectSnapshotJson = null,
+        string? projectSnapshotHash = null,
+        string? generatedByDisplayName = null,
         string? currentUserId = null,
         CancellationToken cancellationToken = default)
     {
@@ -343,6 +370,9 @@ public class QuotationService : IQuotationService
                 shippingCost,
                 taxAmount,
                 specialTerms,
+                projectSnapshotJson,
+                projectSnapshotHash,
+                generatedByDisplayName,
                 changeSummary,
                 cancellationToken);
 
@@ -636,6 +666,46 @@ public class QuotationService : IQuotationService
     }
 
     /// <summary>
+    /// Attaches a generated PDF artifact to a specific quotation version.
+    /// </summary>
+    /// <param name="quotationId">The unique identifier of the quotation.</param>
+    /// <param name="versionNumber">The version number to update.</param>
+    /// <param name="pdfArtifactUrl">The customer-facing PDF artifact URL.</param>
+    /// <param name="pdfArtifactStoragePath">The internal PDF artifact storage path.</param>
+    /// <param name="pdfGeneratedAt">The PDF generation timestamp.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The updated quotation version.</returns>
+    public async Task<QuotationVersion> AttachVersionPdfArtifactAsync(
+        Guid quotationId,
+        int versionNumber,
+        string? pdfArtifactUrl,
+        string? pdfArtifactStoragePath,
+        DateTime? pdfGeneratedAt,
+        CancellationToken cancellationToken = default)
+    {
+        var version = await _context.QuotationVersions
+            .FirstOrDefaultAsync(v => v.QuotationId == quotationId && v.VersionNumber == versionNumber, cancellationToken);
+
+        if (version is null)
+        {
+            throw new KeyNotFoundException($"Version {versionNumber} not found for quotation {quotationId}");
+        }
+
+        version.PdfArtifactUrl = string.IsNullOrWhiteSpace(pdfArtifactUrl) ? null : pdfArtifactUrl.Trim();
+        version.PdfArtifactStoragePath = string.IsNullOrWhiteSpace(pdfArtifactStoragePath) ? null : pdfArtifactStoragePath.Trim();
+        version.PdfGeneratedAt = pdfGeneratedAt ?? DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Attached PDF artifact to quotation {QuotationId} version {VersionNumber}",
+            quotationId,
+            versionNumber);
+
+        return version;
+    }
+
+    /// <summary>
     /// Generates a PDF for a quotation.
     /// </summary>
     /// <param name="quotationId">The unique identifier of the quotation.</param>
@@ -739,9 +809,15 @@ public class QuotationService : IQuotationService
         decimal shippingCost,
         decimal taxAmount,
         string? specialTerms,
+        string? projectSnapshotJson,
+        string? projectSnapshotHash,
+        string? generatedByDisplayName,
         string changeSummary,
         CancellationToken cancellationToken)
     {
+        var normalizedSnapshot = NormalizeProjectSnapshotJson(projectSnapshotJson);
+        var resolvedSnapshotHash = ResolveSnapshotHash(normalizedSnapshot, projectSnapshotHash);
+
         var version = new QuotationVersion
         {
             Id = Guid.NewGuid(),
@@ -750,6 +826,9 @@ public class QuotationService : IQuotationService
             CreatedByUserId = createdByUserId,
             CreatedAt = DateTime.UtcNow,
             ChangeSummary = changeSummary,
+            ProjectSnapshotJson = normalizedSnapshot,
+            ProjectSnapshotHash = resolvedSnapshotHash,
+            GeneratedByDisplayName = string.IsNullOrWhiteSpace(generatedByDisplayName) ? null : generatedByDisplayName.Trim(),
             TotalPrice = 0, // Will be calculated
             CurrencyCode = "THB",
             ManualDiscountAmount = Math.Max(0m, manualDiscountAmount),
@@ -830,5 +909,39 @@ public class QuotationService : IQuotationService
         version.TotalPrice = totalPrice + Math.Max(0m, shippingCost) + Math.Max(0m, taxAmount);
 
         return version;
+    }
+
+    private static string? NormalizeProjectSnapshotJson(string? snapshotJson)
+    {
+        if (string.IsNullOrWhiteSpace(snapshotJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(snapshotJson);
+            return document.RootElement.GetRawText();
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException("ProjectSnapshotJson must be valid JSON.", nameof(snapshotJson), ex);
+        }
+    }
+
+    private static string? ResolveSnapshotHash(string? normalizedSnapshotJson, string? suppliedHash)
+    {
+        if (!string.IsNullOrWhiteSpace(suppliedHash))
+        {
+            return suppliedHash.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(normalizedSnapshotJson))
+        {
+            return null;
+        }
+
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedSnapshotJson));
+        return Convert.ToHexString(hashBytes);
     }
 }

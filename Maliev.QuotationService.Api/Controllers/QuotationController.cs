@@ -89,6 +89,8 @@ public class QuotationController : ControllerBase
             var quotation = await _quotationService.CreateAsync(
                 customerId: request.CustomerId,
                 sourceRfqId: request.SourceRfqId,
+                sourceProjectId: request.SourceProjectId,
+                sourceProjectNumber: request.SourceProjectNumber,
                 validityPeriodStart: request.ValidityPeriodStart,
                 validityPeriodEnd: request.ValidityPeriodEnd,
                 lineItems: request.LineItems,
@@ -100,6 +102,10 @@ public class QuotationController : ControllerBase
                 shippingCost: request.ShippingCost,
                 taxAmount: request.TaxAmount,
                 specialTerms: request.SpecialTerms,
+                projectSnapshotJson: request.ProjectSnapshotJson,
+                projectSnapshotHash: request.ProjectSnapshotHash,
+                generatedByDisplayName: request.GeneratedByDisplayName,
+                changeSummary: request.ChangeSummary,
                 cancellationToken: cancellationToken);
 
             // Reload with full data
@@ -111,6 +117,10 @@ public class QuotationController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -241,6 +251,9 @@ public class QuotationController : ControllerBase
                   shippingCost: request.ShippingCost,
                   taxAmount: request.TaxAmount,
                   specialTerms: request.SpecialTerms,
+                  projectSnapshotJson: request.ProjectSnapshotJson,
+                  projectSnapshotHash: request.ProjectSnapshotHash,
+                  generatedByDisplayName: request.GeneratedByDisplayName,
                   currentUserId: currentUserId,
                   cancellationToken: cancellationToken);
 
@@ -253,6 +266,10 @@ public class QuotationController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -464,6 +481,46 @@ public class QuotationController : ControllerBase
     }
 
     /// <summary>
+    /// Attach a generated PDF artifact to a specific quotation version.
+    /// </summary>
+    /// <remarks>
+    /// Used by ProjectService and BFFs after PdfService has created the customer-facing quotation document.
+    /// </remarks>
+    /// <response code="200">Version PDF artifact updated.</response>
+    /// <response code="403">If user lacks `quotation.quotations.update` permission.</response>
+    /// <response code="404">Quotation version not found.</response>
+    [HttpPost("{id}/versions/{versionNumber}/pdf-artifact")]
+    [RequirePermission(QuotationPermissions.QuotationsUpdate)]
+    [ProducesResponseType(typeof(QuotationVersionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<QuotationVersionResponse>> AttachQuotationVersionPdfArtifact(
+        Guid id,
+        int versionNumber,
+        [FromBody] AttachQuotationVersionPdfRequest request,
+        CancellationToken cancellationToken)
+    {
+        var scopeResult = await EnsureQuotationInCustomerScopeAsync(id, cancellationToken);
+        if (scopeResult is not null) return scopeResult;
+
+        try
+        {
+            var version = await _quotationService.AttachVersionPdfArtifactAsync(
+                id,
+                versionNumber,
+                request.PdfArtifactUrl,
+                request.PdfArtifactStoragePath,
+                request.PdfGeneratedAt,
+                cancellationToken);
+
+            return Ok(MapVersionToResponse(version));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Generate PDF for quotation.
     /// </summary>
     /// <remarks>
@@ -530,7 +587,7 @@ public class QuotationController : ControllerBase
         // Get current version number
         var currentVersion = quotation.Versions.FirstOrDefault(v => v.Id == quotation.CurrentVersionId);
         var versions = quotation.Versions
-            .OrderBy(version => version.VersionNumber)
+            .OrderByDescending(version => version.VersionNumber)
             .Select(MapVersionToResponse)
             .ToList();
         var lineSubtotal = currentVersion?.LineItems.Sum(item => item.LineTotal) ?? 0m;
@@ -552,6 +609,8 @@ public class QuotationController : ControllerBase
                 PhoneNumber = quotation.Customer.PhoneNumber
             } : null,
             SourceRfqId = quotation.SourceRfqId,
+            SourceProjectId = quotation.SourceProjectId,
+            SourceProjectNumber = quotation.SourceProjectNumber,
             CurrentVersionNumber = currentVersion?.VersionNumber ?? 0,
             Status = quotation.Status,
             QuotationNumber = $"Q-{quotation.Id.ToString("N")[..8].ToUpperInvariant()}",
@@ -597,6 +656,12 @@ public class QuotationController : ControllerBase
             } : null,
             DeliveryExpectations = ParseDeliveryExpectations(version.DeliveryExpectations),
             ChangeSummary = version.ChangeSummary,
+            ProjectSnapshotJson = version.ProjectSnapshotJson,
+            ProjectSnapshotHash = version.ProjectSnapshotHash,
+            PdfArtifactUrl = version.PdfArtifactUrl,
+            PdfArtifactStoragePath = version.PdfArtifactStoragePath,
+            PdfGeneratedAt = version.PdfGeneratedAt,
+            GeneratedByDisplayName = version.GeneratedByDisplayName,
             SpecialTerms = version.SpecialTerms,
             CreatedByUserId = version.CreatedByUserId,
             CreatedAt = version.CreatedAt

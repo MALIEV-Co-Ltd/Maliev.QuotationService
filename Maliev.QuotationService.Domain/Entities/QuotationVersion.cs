@@ -10,6 +10,12 @@ public class QuotationVersion
     public string CreatedByUserId { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public string? ChangeSummary { get; set; }
+    public string? ProjectSnapshotJson { get; set; }
+    public string? ProjectSnapshotHash { get; set; }
+    public string? PdfArtifactUrl { get; set; }
+    public string? PdfArtifactStoragePath { get; set; }
+    public DateTime? PdfGeneratedAt { get; set; }
+    public string? GeneratedByDisplayName { get; set; }
     public decimal TotalPrice { get; set; }
     public string CurrencyCode { get; set; } = "USD";
     public JsonDocument? DeliveryExpectations { get; set; }

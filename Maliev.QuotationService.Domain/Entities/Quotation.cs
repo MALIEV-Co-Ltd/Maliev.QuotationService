@@ -7,6 +7,8 @@ public class Quotation
     public Guid Id { get; set; }
     public Guid CustomerId { get; set; }
     public Guid? SourceRfqId { get; set; }
+    public Guid? SourceProjectId { get; set; }
+    public string? SourceProjectNumber { get; set; }
     public Guid? CurrentVersionId { get; set; }
     public QuotationStatus Status { get; set; }
 

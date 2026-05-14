@@ -63,6 +63,36 @@ public class QuotationVersionResponse
     public string? ChangeSummary { get; set; }
 
     /// <summary>
+    /// Immutable JSON snapshot of the project state used to generate this version.
+    /// </summary>
+    public string? ProjectSnapshotJson { get; set; }
+
+    /// <summary>
+    /// Deterministic hash of the immutable project snapshot.
+    /// </summary>
+    public string? ProjectSnapshotHash { get; set; }
+
+    /// <summary>
+    /// Customer-facing PDF artifact URL for this exact version.
+    /// </summary>
+    public string? PdfArtifactUrl { get; set; }
+
+    /// <summary>
+    /// Storage path for the customer-facing PDF artifact for this exact version.
+    /// </summary>
+    public string? PdfArtifactStoragePath { get; set; }
+
+    /// <summary>
+    /// Timestamp when the PDF artifact was generated for this exact version.
+    /// </summary>
+    public DateTime? PdfGeneratedAt { get; set; }
+
+    /// <summary>
+    /// Human-readable display name for the user who generated this version.
+    /// </summary>
+    public string? GeneratedByDisplayName { get; set; }
+
+    /// <summary>
     /// Customer-facing special terms shown on generated PDFs.
     /// </summary>
     public string? SpecialTerms { get; set; }
