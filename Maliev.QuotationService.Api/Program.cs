@@ -2,6 +2,7 @@ using Maliev.QuotationService.Api.Configuration.Extensions;
 using Maliev.QuotationService.Api.Services.IAM;
 using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Infrastructure.Persistence;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using System.Threading.RateLimiting;
@@ -36,6 +37,12 @@ try
     // Add message bus (RabbitMQ or in-memory fallback)
     builder.AddMassTransitWithRabbitMq(x =>
     {
+        x.AddEntityFrameworkOutbox<QuotationDbContext>(options =>
+        {
+            _ = options.UsePostgres();
+            options.UseBusOutbox();
+        });
+
         x.AddConsumer<Maliev.QuotationService.Api.Consumers.FileDeletedEventConsumer>();
         x.AddConsumer<Maliev.QuotationService.Api.Consumers.FileAnalyzedEventConsumer>();
     });

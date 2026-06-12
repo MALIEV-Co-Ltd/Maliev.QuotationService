@@ -18,4 +18,21 @@ public class ModelIntegrityTests
 
         Assert.False(hasChanges, "Run 'dotnet ef migrations add <Name> --project Maliev.QuotationService.Infrastructure --startup-project Maliev.QuotationService.Api'");
     }
+
+    [Fact]
+    public void Model_ShouldIncludeMassTransitOutboxEntities()
+    {
+        var options = new DbContextOptionsBuilder<QuotationDbContext>()
+            .UseNpgsql("Host=localhost;Database=ModelCheck")
+            .Options;
+
+        using var context = new QuotationDbContext(options);
+        var entityNames = context.Model.GetEntityTypes()
+            .Select(entity => entity.ClrType.FullName)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Contains("MassTransit.EntityFrameworkCoreIntegration.InboxState", entityNames);
+        Assert.Contains("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", entityNames);
+        Assert.Contains("MassTransit.EntityFrameworkCoreIntegration.OutboxState", entityNames);
+    }
 }

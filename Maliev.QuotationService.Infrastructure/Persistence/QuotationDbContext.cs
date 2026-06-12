@@ -1,5 +1,6 @@
 using Maliev.Aspire.ServiceDefaults.Database;
 using Maliev.QuotationService.Domain.Entities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.QuotationService.Infrastructure.Persistence;
@@ -28,6 +29,10 @@ public class QuotationDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(QuotationDbContext).Assembly);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
 
         SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
     }
