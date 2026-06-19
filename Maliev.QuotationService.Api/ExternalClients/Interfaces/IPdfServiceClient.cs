@@ -18,32 +18,13 @@ public interface IPdfServiceClient
 /// Payload for generating a quotation PDF.
 /// </summary>
 public record QuotationPdfPayload(
-    Guid QuotationId,
-    int VersionNumber,
-    string CustomerName,
-    string? CustomerEmail,
-    DateOnly ValidityPeriodStart,
-    DateOnly ValidityPeriodEnd,
-    List<LineItemPayload> LineItems,
-    decimal TotalPrice,
-    string CurrencyCode,
-    string? SpecialTerms);
-
-/// <summary>
-/// Represents a line item in the PDF payload.
-/// </summary>
-public record LineItemPayload(
-    int LineNumber,
-    string MaterialName,
-    decimal Quantity,
-    string QuantityUnit,
-    decimal UnitPrice,
-    decimal LineTotal);
+    string ReferenceId,
+    object Data);
 
 /// <summary>
 /// Response from the PDF generation endpoint.
 /// </summary>
 public record PdfGenerationResponseDto(
-    Guid PdfServiceFileId,
-    string FileName,
-    DateTime GeneratedAt);
+    Guid RequestId,
+    string StorageUrl,
+    string StoragePath);

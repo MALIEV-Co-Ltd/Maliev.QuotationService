@@ -77,6 +77,9 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         Assert.Equal("Initial project quote snapshot", quotationResponse.Versions[0].ChangeSummary);
         Assert.NotNull(quotationResponse.Versions[0].ProjectSnapshotHash);
         Assert.Equal("Quoting Specialist", quotationResponse.Versions[0].GeneratedByDisplayName);
+        Assert.StartsWith("https://storage.example.test/", quotationResponse.Versions[0].PdfArtifactUrl);
+        Assert.StartsWith("pdfs/quotation/", quotationResponse.Versions[0].PdfArtifactStoragePath);
+        Assert.NotNull(quotationResponse.Versions[0].PdfGeneratedAt);
 
         // Verify database persistence
         var savedQuotation = await DbContext.Quotations
@@ -91,6 +94,9 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         Assert.Single(savedQuotation.Versions.First().LineItems);
         Assert.NotNull(savedQuotation.Versions.First().ProjectSnapshotJson);
         Assert.NotNull(savedQuotation.Versions.First().ProjectSnapshotHash);
+        Assert.Equal(quotationResponse.Versions[0].PdfArtifactUrl, savedQuotation.Versions.First().PdfArtifactUrl);
+        Assert.Equal(quotationResponse.Versions[0].PdfArtifactStoragePath, savedQuotation.Versions.First().PdfArtifactStoragePath);
+        Assert.NotNull(savedQuotation.Versions.First().PdfGeneratedAt);
     }
 
     [Fact]

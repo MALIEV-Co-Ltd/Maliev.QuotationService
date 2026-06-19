@@ -33,7 +33,16 @@ public class PdfServiceClient : IPdfServiceClient
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/v1/pdf/generate", payload, cancellationToken);
+            var response = await _httpClient.PostAsJsonAsync(
+                "/pdf/v1/generations/generate",
+                new
+                {
+                    templateCode = "Quotation",
+                    referenceId = payload.ReferenceId,
+                    documentType = 0,
+                    data = payload.Data
+                },
+                cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<PdfGenerationResponseDto>(cancellationToken);
@@ -41,7 +50,7 @@ public class PdfServiceClient : IPdfServiceClient
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Failed to generate PDF for quotation {QuotationId}", payload.QuotationId);
+            _logger.LogError(ex, "Failed to generate PDF for quotation reference {ReferenceId}", payload.ReferenceId);
             throw;
         }
     }

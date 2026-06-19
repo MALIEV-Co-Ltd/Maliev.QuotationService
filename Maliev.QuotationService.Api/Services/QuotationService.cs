@@ -25,6 +25,7 @@ public class QuotationService : IQuotationService
     private readonly MetricsService _metricsService;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ICustomerServiceClient? _customerServiceClient;
+    private readonly IPdfServiceClient? _pdfServiceClient;
 
     /// <summary>
     /// Initializes a new instance of the QuotationService.
@@ -34,18 +35,21 @@ public class QuotationService : IQuotationService
     /// <param name="metricsService">The metrics service.</param>
     /// <param name="publishEndpoint">The publish endpoint for messaging.</param>
     /// <param name="customerServiceClient">The CustomerService client used to hydrate local customer references.</param>
+    /// <param name="pdfServiceClient">The PDF service client used to create quotation artifacts.</param>
     public QuotationService(
         QuotationDbContext context,
         ILogger<QuotationService> logger,
         MetricsService metricsService,
         IPublishEndpoint publishEndpoint,
-        ICustomerServiceClient? customerServiceClient = null)
+        ICustomerServiceClient? customerServiceClient = null,
+        IPdfServiceClient? pdfServiceClient = null)
     {
         _context = context;
         _logger = logger;
         _metricsService = metricsService;
         _publishEndpoint = publishEndpoint;
         _customerServiceClient = customerServiceClient;
+        _pdfServiceClient = pdfServiceClient;
     }
 
     /// <summary>
@@ -112,6 +116,7 @@ public class QuotationService : IQuotationService
         return await strategy.ExecuteAsync(async () =>
         {
             using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            var transactionCommitted = false;
             try
             {
                 // Create quotation
@@ -193,6 +198,9 @@ public class QuotationService : IQuotationService
                 await _context.SaveChangesAsync(cancellationToken);
 
                 await transaction.CommitAsync(cancellationToken);
+                transactionCommitted = true;
+
+                await GenerateAndAttachPdfArtifactAsync(quotation, version, cancellationToken);
 
                 // Emit metric
                 _metricsService.RecordQuotationCreated();
@@ -227,11 +235,94 @@ public class QuotationService : IQuotationService
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync(cancellationToken);
+                if (!transactionCommitted)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+
                 _logger.LogError(ex, "Failed to create quotation for customer {CustomerId}", customerId);
                 throw;
             }
         });
+    }
+
+    private async Task GenerateAndAttachPdfArtifactAsync(
+        Quotation quotation,
+        QuotationVersion version,
+        CancellationToken cancellationToken)
+    {
+        if (_pdfServiceClient is null)
+        {
+            return;
+        }
+
+        var payload = new QuotationPdfPayload(
+            $"{quotation.Id:D}-v{version.VersionNumber}",
+            BuildQuotationPdfData(quotation, version));
+
+        var pdf = await _pdfServiceClient.GeneratePdfAsync(payload, cancellationToken);
+        version.PdfArtifactUrl = pdf.StorageUrl;
+        version.PdfArtifactStoragePath = pdf.StoragePath;
+        version.PdfGeneratedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Generated quotation PDF artifact for quotation {QuotationId} version {VersionNumber}.",
+            quotation.Id,
+            version.VersionNumber);
+    }
+
+    private static object BuildQuotationPdfData(Quotation quotation, QuotationVersion version)
+    {
+        var subtotalBeforeDiscount = version.LineItems.Sum(item => item.LineTotal);
+        var totalDiscount = version.ManualDiscountAmount +
+            version.DiscountStructures.Sum(discount => discount.DiscountValue);
+        return new
+        {
+            quotationNumber = quotation.Id.ToString("D"),
+            versionNumber = version.VersionNumber,
+            quotationDate = quotation.CreatedAt,
+            validityStart = quotation.ValidityPeriodStart.ToDateTime(TimeOnly.MinValue),
+            validityEnd = quotation.ValidityPeriodEnd.ToDateTime(TimeOnly.MinValue),
+            customerName = quotation.Customer?.Name ?? quotation.CustomerId.ToString("D"),
+            customerType = quotation.BillingIdentityType.ToString(),
+            currency = version.CurrencyCode,
+            subtotalBeforeDiscount,
+            totalDiscount,
+            manualDiscountAmount = version.ManualDiscountAmount,
+            shippingCost = version.ShippingCost,
+            subtotal = Math.Max(0m, subtotalBeforeDiscount - totalDiscount) + version.ShippingCost,
+            taxAmount = version.TaxAmount,
+            totalAmount = version.TotalPrice,
+            deliveryExpectations = version.DeliveryExpectations?.RootElement.ToString(),
+            specialTerms = version.SpecialTerms,
+            changeSummary = version.ChangeSummary,
+            quotedByName = version.GeneratedByDisplayName,
+            quotedAt = version.CreatedAt,
+            items = version.LineItems
+                .OrderBy(item => item.LineNumber)
+                .Select(item => new
+                {
+                    index = item.LineNumber,
+                    materialName = item.MaterialName,
+                    manufacturingProcess = item.ManufacturingProcess,
+                    quantity = item.Quantity,
+                    quantityUnit = item.QuantityUnit,
+                    unitPrice = item.UnitPrice,
+                    lineTotal = item.LineTotal,
+                    notes = item.Notes
+                })
+                .ToArray(),
+            discounts = version.DiscountStructures
+                .Select(discount => new
+                {
+                    discountType = discount.DiscountType.ToString(),
+                    discountAmount = discount.DiscountValue,
+                    conditions = discount.Conditions
+                })
+                .ToArray()
+        };
     }
 
     /// <summary>

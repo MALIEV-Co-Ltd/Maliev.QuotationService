@@ -28,6 +28,12 @@ public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, 
             services.Remove(descriptor);
         }
 
+        var pdfDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPdfServiceClient));
+        if (pdfDescriptor != null)
+        {
+            services.Remove(pdfDescriptor);
+        }
+
         // Mock MaterialServiceClient
         var mockMaterialService = new Mock<IMaterialServiceClient>();
 
@@ -58,5 +64,19 @@ public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, 
             .ReturnsAsync(new List<string> { "CNC Machining", "3D Printing" });
 
         services.AddScoped(_ => mockMaterialService.Object);
+        services.AddScoped<IPdfServiceClient, FakePdfServiceClient>();
+    }
+
+    private sealed class FakePdfServiceClient : IPdfServiceClient
+    {
+        public Task<PdfGenerationResponseDto> GeneratePdfAsync(
+            QuotationPdfPayload payload,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new PdfGenerationResponseDto(
+                Guid.NewGuid(),
+                $"https://storage.example.test/{payload.ReferenceId}/quotation.pdf",
+                $"pdfs/quotation/{payload.ReferenceId}/quotation.pdf"));
+        }
     }
 }
