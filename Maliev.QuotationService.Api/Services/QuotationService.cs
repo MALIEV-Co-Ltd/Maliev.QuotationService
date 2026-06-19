@@ -365,6 +365,11 @@ public class QuotationService : IQuotationService
     {
         var query = _context.Quotations
             .Include(q => q.Customer)
+            .Include(q => q.Versions)
+                .ThenInclude(v => v.LineItems)
+            .Include(q => q.Versions)
+                .ThenInclude(v => v.DiscountStructures)
+            .AsSplitQuery()
             .AsQueryable();
 
         // Apply filters

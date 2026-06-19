@@ -97,6 +97,19 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         Assert.Equal(quotationResponse.Versions[0].PdfArtifactUrl, savedQuotation.Versions.First().PdfArtifactUrl);
         Assert.Equal(quotationResponse.Versions[0].PdfArtifactStoragePath, savedQuotation.Versions.First().PdfArtifactStoragePath);
         Assert.NotNull(savedQuotation.Versions.First().PdfGeneratedAt);
+
+        var listResponse = await authenticatedClient.GetAsync($"/quotation/v1/quotations?customerId={customer.Id:D}");
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+
+        var list = await listResponse.Content.ReadFromJsonAsync<PagedResponse<QuotationResponse>>();
+        Assert.NotNull(list);
+        var listedQuotation = Assert.Single(list.Data, item => item.Id == quotationResponse.Id);
+        var listedVersion = Assert.Single(listedQuotation.Versions);
+        Assert.Equal(quotationResponse.Versions[0].Id, listedVersion.Id);
+        Assert.Equal(quotationResponse.Versions[0].VersionNumber, listedVersion.VersionNumber);
+        Assert.Equal(quotationResponse.Versions[0].PdfArtifactUrl, listedVersion.PdfArtifactUrl);
+        Assert.Equal(quotationResponse.Versions[0].PdfArtifactStoragePath, listedVersion.PdfArtifactStoragePath);
+        Assert.Equal(quotationResponse.Versions[0].ProjectSnapshotHash, listedVersion.ProjectSnapshotHash);
     }
 
     [Fact]
