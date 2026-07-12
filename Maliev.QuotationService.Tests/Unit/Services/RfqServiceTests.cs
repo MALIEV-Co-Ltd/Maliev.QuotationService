@@ -1,5 +1,6 @@
 using Xunit;
 using Maliev.QuotationService.Api.Services;
+using Maliev.QuotationService.Api.Exceptions;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Infrastructure.Persistence;
 using Maliev.QuotationService.Domain.Entities;
@@ -158,4 +159,142 @@ public class RfqServiceTests : BaseIntegrationTest
         Assert.Equal(AuditActionType.Update, auditEntry.ActionType);
         Assert.Equal("manager-789", auditEntry.UserId);
     }
+
+    [Theory]
+    [InlineData(RfqStatus.InProgress)]
+    [InlineData(RfqStatus.Qualified)]
+    public async Task MarkRfqAsConvertedAsync_EligibleUnclaimedRfq_TransitionsToConverted(
+        RfqStatus initialStatus)
+    {
+        var service = new RfqService(DbContext, _mockLogger.Object, _metricsService);
+        var customer = await AddConversionCustomerAsync();
+        var rfq = await AddConversionRfqAsync(customer.Id, initialStatus);
+
+        var result = await service.MarkRfqAsConvertedAsync(rfq.Id, "test-user");
+
+        Assert.Equal(rfq.Id, result);
+        DbContext.ChangeTracker.Clear();
+        var converted = await DbContext.Rfqs.AsNoTracking().SingleAsync(item => item.Id == rfq.Id);
+        Assert.Equal(RfqStatus.Converted, converted.Status);
+        Assert.Null(converted.ConvertedToQuotationId);
+    }
+
+    [Fact]
+    public async Task MarkRfqAsConvertedAsync_ConvertedWithoutQuotation_IsIdempotent()
+    {
+        var service = new RfqService(DbContext, _mockLogger.Object, _metricsService);
+        var customer = await AddConversionCustomerAsync();
+        var rfq = await AddConversionRfqAsync(customer.Id, RfqStatus.Converted);
+        DbContext.ChangeTracker.Clear();
+        var before = await CaptureConversionEffectsAsync(rfq.Id);
+
+        var result = await service.MarkRfqAsConvertedAsync(rfq.Id, "test-user");
+
+        Assert.Equal(rfq.Id, result);
+        Assert.Equal(before, await CaptureConversionEffectsAsync(rfq.Id));
+    }
+
+    [Theory]
+    [InlineData(ConversionConflictScenario.New)]
+    [InlineData(ConversionConflictScenario.Abandoned)]
+    [InlineData(ConversionConflictScenario.ClaimedConverted)]
+    public async Task MarkRfqAsConvertedAsync_InvalidLifecycle_RejectsWithoutMutation(
+        ConversionConflictScenario scenario)
+    {
+        var service = new RfqService(DbContext, _mockLogger.Object, _metricsService);
+        var customer = await AddConversionCustomerAsync();
+        var status = scenario switch
+        {
+            ConversionConflictScenario.New => RfqStatus.New,
+            ConversionConflictScenario.Abandoned => RfqStatus.Abandoned,
+            _ => RfqStatus.Converted
+        };
+        var rfq = await AddConversionRfqAsync(customer.Id, status);
+        if (scenario == ConversionConflictScenario.ClaimedConverted)
+        {
+            var quotation = new Quotation
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = customer.Id,
+                Status = QuotationStatus.Draft,
+                ValidityPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
+                ValidityPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            DbContext.Quotations.Add(quotation);
+            await DbContext.SaveChangesAsync();
+            rfq.ConvertedToQuotationId = quotation.Id;
+            await DbContext.SaveChangesAsync();
+        }
+
+        DbContext.ChangeTracker.Clear();
+        var before = await CaptureConversionEffectsAsync(rfq.Id);
+
+        await Assert.ThrowsAsync<RfqConversionConflictException>(() =>
+            service.MarkRfqAsConvertedAsync(rfq.Id, "test-user"));
+
+        Assert.Equal(before, await CaptureConversionEffectsAsync(rfq.Id));
+    }
+
+    private async Task<Customer> AddConversionCustomerAsync()
+    {
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = $"conversion-{Guid.NewGuid():N}@example.test",
+            Name = "Conversion Customer",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        DbContext.Customers.Add(customer);
+        await DbContext.SaveChangesAsync();
+        return customer;
+    }
+
+    private async Task<Rfq> AddConversionRfqAsync(Guid customerId, RfqStatus status)
+    {
+        var rfq = new Rfq
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            ChannelSource = RfqChannel.Website,
+            Status = status,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        DbContext.Rfqs.Add(rfq);
+        await DbContext.SaveChangesAsync();
+        return rfq;
+    }
+
+    private async Task<ConversionEffects> CaptureConversionEffectsAsync(Guid rfqId)
+    {
+        DbContext.ChangeTracker.Clear();
+        var rfq = await DbContext.Rfqs
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == rfqId);
+        return new ConversionEffects(
+            rfq.Status,
+            rfq.ConvertedToQuotationId,
+            rfq.UpdatedAt,
+            await DbContext.AuditLogEntries.CountAsync(),
+            await DbContext.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*)::int AS \"Value\" FROM outbox_message").SingleAsync());
+    }
+
+    public enum ConversionConflictScenario
+    {
+        New,
+        Abandoned,
+        ClaimedConverted
+    }
+
+    private sealed record ConversionEffects(
+        RfqStatus Status,
+        Guid? ConvertedToQuotationId,
+        DateTime UpdatedAt,
+        int Audits,
+        int OutboxMessages);
 }

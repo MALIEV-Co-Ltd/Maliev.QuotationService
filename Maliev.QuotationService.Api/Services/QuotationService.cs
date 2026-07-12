@@ -1,5 +1,6 @@
 using Maliev.MessagingContracts.Contracts.Quotations;
 using Maliev.MessagingContracts;
+using Maliev.QuotationService.Api.Exceptions;
 using Maliev.QuotationService.Api.ExternalClients;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 using Maliev.QuotationService.Api.DTOs.Requests;
@@ -105,21 +106,16 @@ public class QuotationService : IQuotationService
     {
         _logger.LogInformation("Creating quotation for customer {CustomerId}", customerId);
 
+        if (sourceRfqId.HasValue)
+        {
+            await EnsureRfqAvailableForCreateAsync(sourceRfqId.Value, customerId, cancellationToken);
+        }
+
         var verifiedSourceProjectNumber = sourceProjectId.HasValue
             ? await EnsureProjectOwnershipAsync(sourceProjectId.Value, customerId, cancellationToken)
             : sourceProjectNumber;
 
         await EnsureCustomerReferenceAsync(customerId, cancellationToken);
-
-        // Verify RFQ exists if provided
-        if (sourceRfqId.HasValue)
-        {
-            var rfqExists = await _context.Rfqs.AnyAsync(r => r.Id == sourceRfqId.Value, cancellationToken);
-            if (!rfqExists)
-            {
-                throw new KeyNotFoundException($"RFQ with ID {sourceRfqId.Value} not found");
-            }
-        }
 
         var strategy = _context.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
@@ -151,6 +147,15 @@ public class QuotationService : IQuotationService
                 // Save quotation first without CurrentVersionId to avoid circular dependency
                 await _context.SaveChangesAsync(cancellationToken);
 
+                if (sourceRfqId.HasValue)
+                {
+                    await ClaimRfqForQuotationAsync(
+                        sourceRfqId.Value,
+                        customerId,
+                        quotation.Id,
+                        cancellationToken);
+                }
+
                 // Create first version after quotation is saved
                 var version = await CreateVersionAsync(
                     quotation.Id,
@@ -171,18 +176,6 @@ public class QuotationService : IQuotationService
 
                 // Now update the quotation with the current version ID
                 quotation.CurrentVersionId = version.Id;
-
-                // Update RFQ if linked
-                if (sourceRfqId.HasValue)
-                {
-                    var rfq = await _context.Rfqs.FindAsync(new object[] { sourceRfqId.Value }, cancellationToken);
-                    if (rfq != null)
-                    {
-                        rfq.ConvertedToQuotationId = quotation.Id;
-                        rfq.Status = RfqStatus.Converted;
-                        rfq.UpdatedAt = DateTime.UtcNow;
-                    }
-                }
 
                 // Create audit log entry
                 var auditEntry = new AuditLogEntry
@@ -457,6 +450,15 @@ public class QuotationService : IQuotationService
         if (quotation == null)
         {
             throw new KeyNotFoundException($"Quotation with ID {quotationId} not found");
+        }
+
+        if (quotation.SourceRfqId.HasValue)
+        {
+            await EnsureRfqLinkedToQuotationAsync(
+                quotation.SourceRfqId.Value,
+                quotation.CustomerId,
+                quotation.Id,
+                cancellationToken);
         }
 
         if (quotation.SourceProjectId.HasValue)
@@ -930,6 +932,85 @@ public class QuotationService : IQuotationService
                 throw new ProjectNotFoundException(projectId),
             _ => throw new ProjectServiceUnavailableException()
         };
+    }
+
+    private async Task EnsureRfqAvailableForCreateAsync(
+        Guid rfqId,
+        Guid customerId,
+        CancellationToken cancellationToken)
+    {
+        if (rfqId == Guid.Empty)
+        {
+            throw new RfqNotFoundException(rfqId);
+        }
+
+        var isAvailable = await _context.Rfqs
+            .AsNoTracking()
+            .AnyAsync(
+                rfq => rfq.Id == rfqId &&
+                    rfq.CustomerId == customerId &&
+                    rfq.ConvertedToQuotationId == null &&
+                    (rfq.Status == RfqStatus.Qualified ||
+                        rfq.Status == RfqStatus.InProgress ||
+                        rfq.Status == RfqStatus.Converted),
+                cancellationToken);
+
+        if (!isAvailable)
+        {
+            throw new RfqNotFoundException(rfqId);
+        }
+    }
+
+    private async Task ClaimRfqForQuotationAsync(
+        Guid rfqId,
+        Guid customerId,
+        Guid quotationId,
+        CancellationToken cancellationToken)
+    {
+        var affected = await _context.Rfqs
+            .Where(rfq => rfq.Id == rfqId &&
+                rfq.CustomerId == customerId &&
+                rfq.ConvertedToQuotationId == null &&
+                (rfq.Status == RfqStatus.Qualified ||
+                    rfq.Status == RfqStatus.InProgress ||
+                    rfq.Status == RfqStatus.Converted))
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(rfq => rfq.Status, RfqStatus.Converted)
+                    .SetProperty(rfq => rfq.ConvertedToQuotationId, quotationId)
+                    .SetProperty(rfq => rfq.UpdatedAt, DateTime.UtcNow),
+                cancellationToken);
+
+        if (affected != 1)
+        {
+            throw new RfqNotFoundException(rfqId);
+        }
+    }
+
+    private async Task EnsureRfqLinkedToQuotationAsync(
+        Guid rfqId,
+        Guid customerId,
+        Guid quotationId,
+        CancellationToken cancellationToken)
+    {
+        if (rfqId == Guid.Empty)
+        {
+            throw new RfqNotFoundException(rfqId);
+        }
+
+        var isLinked = await _context.Rfqs
+            .AsNoTracking()
+            .AnyAsync(
+                rfq => rfq.Id == rfqId &&
+                    rfq.CustomerId == customerId &&
+                    rfq.Status == RfqStatus.Converted &&
+                    rfq.ConvertedToQuotationId == quotationId,
+                cancellationToken);
+
+        if (!isLinked)
+        {
+            throw new RfqNotFoundException(rfqId);
+        }
     }
 
     private static string? FirstNonEmpty(params string?[] values) =>

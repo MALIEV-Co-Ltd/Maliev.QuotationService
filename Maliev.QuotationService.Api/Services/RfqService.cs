@@ -1,3 +1,4 @@
+using Maliev.QuotationService.Api.Exceptions;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
 using Maliev.QuotationService.Infrastructure.Persistence;
@@ -466,24 +467,49 @@ public class RfqService : IRfqService
         CancellationToken cancellationToken = default)
     {
         var rfq = await _context.Rfqs
-            .Include(r => r.Customer)
-            .FirstOrDefaultAsync(r => r.Id == rfqId, cancellationToken);
+            .AsNoTracking()
+            .Where(item => item.Id == rfqId)
+            .Select(item => new
+            {
+                item.Id,
+                item.CustomerId,
+                item.Status,
+                item.ConvertedToQuotationId
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (rfq == null)
         {
             throw new KeyNotFoundException($"RFQ with ID {rfqId} not found");
         }
 
-        // In a real implementation, this would likely take more parameters from the UI
-        // such as line items, pricing, etc. for the initial draft.
-        _logger.LogInformation("Marking RFQ {RfqId} as converted for customer {CustomerId}", rfqId, rfq.CustomerId);
+        if (rfq.Status == RfqStatus.Converted && rfq.ConvertedToQuotationId is null)
+        {
+            return rfq.Id;
+        }
 
-        rfq.Status = RfqStatus.Converted;
-        rfq.UpdatedAt = DateTime.UtcNow;
+        if (rfq.ConvertedToQuotationId is not null ||
+            (rfq.Status != RfqStatus.InProgress && rfq.Status != RfqStatus.Qualified))
+        {
+            throw new RfqConversionConflictException();
+        }
 
-        // The actual Quotation creation is usually a separate POST /quotations call
-        // that references this rfqId, but we mark it here to satisfy the workflow.
-        await _context.SaveChangesAsync(cancellationToken);
+        var affected = await _context.Rfqs
+            .Where(item => item.Id == rfqId &&
+                item.ConvertedToQuotationId == null &&
+                (item.Status == RfqStatus.InProgress || item.Status == RfqStatus.Qualified))
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.Status, RfqStatus.Converted)
+                    .SetProperty(item => item.UpdatedAt, DateTime.UtcNow),
+                cancellationToken);
+
+        if (affected != 1)
+        {
+            throw new RfqConversionConflictException();
+        }
+
+        _logger.LogInformation("Marked RFQ {RfqId} as converted for customer {CustomerId}", rfqId, rfq.CustomerId);
 
         return rfq.Id;
     }

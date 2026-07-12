@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Maliev.QuotationService.Api.Authorization;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
+using Maliev.QuotationService.Api.Exceptions;
 using Maliev.QuotationService.Api.ExternalClients;
 using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
@@ -72,18 +73,6 @@ public class QuotationController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (IsOutsideCustomerScope(request.CustomerId)) return Forbid();
-        if (request.SourceRfqId.HasValue)
-        {
-            var rfq = await _context.Rfqs
-                .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.Id == request.SourceRfqId.Value, cancellationToken);
-            if (rfq is null)
-            {
-                return NotFound(new { message = $"RFQ with ID {request.SourceRfqId.Value} not found" });
-            }
-
-            if (IsOutsideCustomerScope(rfq.CustomerId)) return Forbid();
-        }
 
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
@@ -116,6 +105,11 @@ public class QuotationController : ControllerBase
             var response = await MapToResponseAsync(fullQuotation!, cancellationToken);
 
             return CreatedAtAction(nameof(GetQuotationById), new { id = quotation.Id }, response);
+        }
+        catch (RfqNotFoundException)
+        {
+            Response.StatusCode = StatusCodes.Status404NotFound;
+            return new EmptyResult();
         }
         catch (ProjectNotFoundException)
         {
@@ -277,6 +271,11 @@ public class QuotationController : ControllerBase
             var response = await MapToResponseAsync(updated!, cancellationToken);
 
             return Ok(response);
+        }
+        catch (RfqNotFoundException)
+        {
+            Response.StatusCode = StatusCodes.Status404NotFound;
+            return new EmptyResult();
         }
         catch (ProjectNotFoundException)
         {

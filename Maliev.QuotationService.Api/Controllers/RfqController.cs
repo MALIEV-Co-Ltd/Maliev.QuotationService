@@ -3,6 +3,7 @@ using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.QuotationService.Api.Authorization;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
+using Maliev.QuotationService.Api.Exceptions;
 using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Infrastructure.Persistence;
@@ -318,6 +319,7 @@ public class RfqController : ControllerBase
     [RequirePermission(QuotationPermissions.QuotationsUpdate)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> MarkAsConverted(
         Guid id,
         CancellationToken cancellationToken)
@@ -335,6 +337,12 @@ public class RfqController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+        catch (RfqConversionConflictException)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "RFQ cannot be converted.");
         }
     }
     private static RfqResponse MapToResponse(Domain.Entities.Rfq rfq, Domain.Entities.Customer customer)
