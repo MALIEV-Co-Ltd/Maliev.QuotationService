@@ -76,6 +76,7 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
 
     public virtual async Task InitializeAsync()
     {
+        Factory.ResetTestDoubles();
         // Ensure containers are started and migrations applied
         await Factory.InitializeAsync();
         // Clean database for test isolation

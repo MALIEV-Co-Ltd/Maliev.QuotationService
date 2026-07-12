@@ -9,12 +9,15 @@ namespace Maliev.QuotationService.Tests.Fixtures;
 
 public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, QuotationDbContext>
 {
+    public ControlledProjectServiceClient ProjectServiceClient { get; } = new();
+
     protected override void ConfigureEnvironmentVariables()
     {
         base.ConfigureEnvironmentVariables();
 
         // Set dummy URL for MaterialService to prevent constructor injection failures
         Environment.SetEnvironmentVariable("MaterialService__BaseUrl", "http://localhost:5002");
+        Environment.SetEnvironmentVariable("Services__ProjectService__BaseUrl", "http://localhost:5003");
     }
 
     protected override void ConfigureAdditionalServices(IServiceCollection services)
@@ -32,6 +35,13 @@ public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, 
         if (pdfDescriptor != null)
         {
             services.Remove(pdfDescriptor);
+        }
+
+        foreach (var projectDescriptor in services
+            .Where(descriptor => descriptor.ServiceType == typeof(IProjectServiceClient))
+            .ToArray())
+        {
+            services.Remove(projectDescriptor);
         }
 
         // Mock MaterialServiceClient
@@ -65,7 +75,10 @@ public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, 
 
         services.AddScoped(_ => mockMaterialService.Object);
         services.AddScoped<IPdfServiceClient, FakePdfServiceClient>();
+        services.AddSingleton<IProjectServiceClient>(ProjectServiceClient);
     }
+
+    public void ResetTestDoubles() => ProjectServiceClient.Reset();
 
     private sealed class FakePdfServiceClient : IPdfServiceClient
     {

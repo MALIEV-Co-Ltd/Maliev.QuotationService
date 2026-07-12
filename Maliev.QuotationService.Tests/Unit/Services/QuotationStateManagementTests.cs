@@ -1,6 +1,7 @@
 using Xunit;
 using Maliev.QuotationService.Api.Services;
 using Maliev.QuotationService.Api.Services.Metrics;
+using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 using Maliev.QuotationService.Infrastructure.Persistence;
 using Maliev.QuotationService.Domain.Entities;
 using Maliev.QuotationService.Domain.Enums;
@@ -24,7 +25,12 @@ public class QuotationStateManagementTests : BaseIntegrationTest
         _mockLogger = new Mock<ILogger<Maliev.QuotationService.Api.Services.QuotationService>>();
         _metricsService = new MetricsService();
         _mockPublishEndpoint = new Mock<IPublishEndpoint>();
-        _quotationService = new Maliev.QuotationService.Api.Services.QuotationService(DbContext, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
+        _quotationService = new Maliev.QuotationService.Api.Services.QuotationService(
+            DbContext,
+            _mockLogger.Object,
+            _metricsService,
+            _mockPublishEndpoint.Object,
+            Mock.Of<IProjectServiceClient>());
     }
 
     [Fact]
