@@ -137,8 +137,10 @@ public class QuotationServiceTests : BaseIntegrationTest
         Assert.Equal(customer.Id, quotation.CustomerId);
 
         // Verify RFQ status was updated
-        var updatedRfq = await DbContext.Rfqs.FindAsync(rfq.Id);
+        DbContext.ChangeTracker.Clear();
+        var updatedRfq = await DbContext.Rfqs.AsNoTracking().SingleAsync(item => item.Id == rfq.Id);
         Assert.Equal(quotation.Id, updatedRfq!.ConvertedToQuotationId);
+        Assert.Equal(RfqStatus.Converted, updatedRfq.Status);
     }
 
     [Fact]
