@@ -1,5 +1,6 @@
 using Maliev.MessagingContracts.Contracts.Quotations;
 using Maliev.MessagingContracts;
+using Maliev.QuotationService.Api.ExternalClients;
 using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.Services.Interfaces;
@@ -24,6 +25,7 @@ public class QuotationService : IQuotationService
     private readonly ILogger<QuotationService> _logger;
     private readonly MetricsService _metricsService;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly IProjectServiceClient _projectServiceClient;
     private readonly ICustomerServiceClient? _customerServiceClient;
     private readonly IPdfServiceClient? _pdfServiceClient;
 
@@ -34,6 +36,7 @@ public class QuotationService : IQuotationService
     /// <param name="logger">The logger.</param>
     /// <param name="metricsService">The metrics service.</param>
     /// <param name="publishEndpoint">The publish endpoint for messaging.</param>
+    /// <param name="projectServiceClient">The ProjectService client used to enforce project ownership.</param>
     /// <param name="customerServiceClient">The CustomerService client used to hydrate local customer references.</param>
     /// <param name="pdfServiceClient">The PDF service client used to create quotation artifacts.</param>
     public QuotationService(
@@ -41,6 +44,7 @@ public class QuotationService : IQuotationService
         ILogger<QuotationService> logger,
         MetricsService metricsService,
         IPublishEndpoint publishEndpoint,
+        IProjectServiceClient projectServiceClient,
         ICustomerServiceClient? customerServiceClient = null,
         IPdfServiceClient? pdfServiceClient = null)
     {
@@ -48,6 +52,7 @@ public class QuotationService : IQuotationService
         _logger = logger;
         _metricsService = metricsService;
         _publishEndpoint = publishEndpoint;
+        _projectServiceClient = projectServiceClient;
         _customerServiceClient = customerServiceClient;
         _pdfServiceClient = pdfServiceClient;
     }
@@ -100,6 +105,10 @@ public class QuotationService : IQuotationService
     {
         _logger.LogInformation("Creating quotation for customer {CustomerId}", customerId);
 
+        var verifiedSourceProjectNumber = sourceProjectId.HasValue
+            ? await EnsureProjectOwnershipAsync(sourceProjectId.Value, customerId, cancellationToken)
+            : sourceProjectNumber;
+
         await EnsureCustomerReferenceAsync(customerId, cancellationToken);
 
         // Verify RFQ exists if provided
@@ -126,7 +135,9 @@ public class QuotationService : IQuotationService
                     CustomerId = customerId,
                     SourceRfqId = sourceRfqId,
                     SourceProjectId = sourceProjectId,
-                    SourceProjectNumber = string.IsNullOrWhiteSpace(sourceProjectNumber) ? null : sourceProjectNumber.Trim(),
+                    SourceProjectNumber = string.IsNullOrWhiteSpace(verifiedSourceProjectNumber)
+                        ? null
+                        : verifiedSourceProjectNumber.Trim(),
                     Status = QuotationStatus.Draft,
                     BillingIdentityType = billingIdentityType,
                     ValidityPeriodStart = DateOnly.FromDateTime(validityPeriodStart),
@@ -187,7 +198,7 @@ public class QuotationService : IQuotationService
                         CustomerId = customerId,
                         SourceRfqId = sourceRfqId,
                         SourceProjectId = sourceProjectId,
-                        SourceProjectNumber = sourceProjectNumber,
+                        SourceProjectNumber = verifiedSourceProjectNumber,
                         Status = QuotationStatus.Draft.ToString()
                     }))
                 };
@@ -446,6 +457,15 @@ public class QuotationService : IQuotationService
         if (quotation == null)
         {
             throw new KeyNotFoundException($"Quotation with ID {quotationId} not found");
+        }
+
+        if (quotation.SourceProjectId.HasValue)
+        {
+            var verifiedProjectNumber = await EnsureProjectOwnershipAsync(
+                quotation.SourceProjectId.Value,
+                quotation.CustomerId,
+                cancellationToken);
+            quotation.SourceProjectNumber = verifiedProjectNumber;
         }
 
         try
@@ -889,6 +909,27 @@ public class QuotationService : IQuotationService
         });
 
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<string> EnsureProjectOwnershipAsync(
+        Guid projectId,
+        Guid customerId,
+        CancellationToken cancellationToken)
+    {
+        if (projectId == Guid.Empty)
+        {
+            throw new ProjectNotFoundException(projectId);
+        }
+
+        var result = await _projectServiceClient.VerifyOwnershipAsync(projectId, customerId, cancellationToken);
+        return result.Status switch
+        {
+            ProjectOwnershipStatus.Owned when !string.IsNullOrWhiteSpace(result.ProjectNumber) =>
+                result.ProjectNumber.Trim(),
+            ProjectOwnershipStatus.NotOwned =>
+                throw new ProjectNotFoundException(projectId),
+            _ => throw new ProjectServiceUnavailableException()
+        };
     }
 
     private static string? FirstNonEmpty(params string?[] values) =>

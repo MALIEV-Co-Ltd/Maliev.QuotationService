@@ -58,6 +58,10 @@ public static class ServiceCollectionExtensions
             "CustomerService",
             sourceServiceName: "quotation");
 
+        builder.AddAuthenticatedServiceClient<IProjectServiceClient, ProjectServiceClient>(
+            "ProjectService",
+            sourceServiceName: "quotation");
+
         return services;
     }
 }

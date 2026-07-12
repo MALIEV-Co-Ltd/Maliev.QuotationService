@@ -2,6 +2,7 @@ using Xunit;
 using Maliev.QuotationService.Api.Services;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
+using Maliev.QuotationService.Api.ExternalClients.Interfaces;
 using Maliev.QuotationService.Infrastructure.Persistence;
 using Maliev.QuotationService.Domain.Entities;
 using Maliev.QuotationService.Domain.Enums;
@@ -31,7 +32,12 @@ public class QuotationServiceTests : BaseIntegrationTest
     public async Task CreateAsync_ValidRequest_CreatesQuotation()
     {
         // Arrange
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(DbContext, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(
+            DbContext,
+            _mockLogger.Object,
+            _metricsService,
+            _mockPublishEndpoint.Object,
+            Mock.Of<IProjectServiceClient>());
 
         var customer = new Customer
         {
@@ -79,7 +85,12 @@ public class QuotationServiceTests : BaseIntegrationTest
     public async Task CreateAsync_FromRfq_LinksToRfq()
     {
         // Arrange
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(DbContext, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(
+            DbContext,
+            _mockLogger.Object,
+            _metricsService,
+            _mockPublishEndpoint.Object,
+            Mock.Of<IProjectServiceClient>());
 
         var customer = new Customer
         {
@@ -134,7 +145,12 @@ public class QuotationServiceTests : BaseIntegrationTest
     public async Task UpdateAsync_CreatesNewVersion()
     {
         // Arrange
-        var service = new Maliev.QuotationService.Api.Services.QuotationService(DbContext, _mockLogger.Object, _metricsService, _mockPublishEndpoint.Object);
+        var service = new Maliev.QuotationService.Api.Services.QuotationService(
+            DbContext,
+            _mockLogger.Object,
+            _metricsService,
+            _mockPublishEndpoint.Object,
+            Mock.Of<IProjectServiceClient>());
 
         var customer = new Customer
         {

@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Maliev.QuotationService.Api.Authorization;
 using Maliev.QuotationService.Api.DTOs.Requests;
 using Maliev.QuotationService.Api.DTOs.Responses;
+using Maliev.QuotationService.Api.ExternalClients;
 using Maliev.QuotationService.Application.Authorization;
 using Maliev.QuotationService.Api.Services.Interfaces;
 using Maliev.QuotationService.Api.Services.Metrics;
@@ -64,6 +65,8 @@ public class QuotationController : ControllerBase
     [RequirePermission(QuotationPermissions.QuotationsCreate)]
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<QuotationResponse>> CreateQuotation(
         [FromBody] CreateQuotationRequest request,
         CancellationToken cancellationToken)
@@ -113,6 +116,17 @@ public class QuotationController : ControllerBase
             var response = await MapToResponseAsync(fullQuotation!, cancellationToken);
 
             return CreatedAtAction(nameof(GetQuotationById), new { id = quotation.Id }, response);
+        }
+        catch (ProjectNotFoundException)
+        {
+            Response.StatusCode = StatusCodes.Status404NotFound;
+            return new EmptyResult();
+        }
+        catch (ProjectServiceUnavailableException)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Project service unavailable.");
         }
         catch (KeyNotFoundException ex)
         {
@@ -229,6 +243,7 @@ public class QuotationController : ControllerBase
     [ProducesResponseType(typeof(QuotationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<QuotationResponse>> UpdateQuotation(
         Guid id,
         [FromBody] UpdateQuotationRequest request,
@@ -262,6 +277,17 @@ public class QuotationController : ControllerBase
             var response = await MapToResponseAsync(updated!, cancellationToken);
 
             return Ok(response);
+        }
+        catch (ProjectNotFoundException)
+        {
+            Response.StatusCode = StatusCodes.Status404NotFound;
+            return new EmptyResult();
+        }
+        catch (ProjectServiceUnavailableException)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Project service unavailable.");
         }
         catch (KeyNotFoundException ex)
         {

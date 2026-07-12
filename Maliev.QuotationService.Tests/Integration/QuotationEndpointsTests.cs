@@ -32,6 +32,7 @@ public class QuotationEndpointsTests : BaseIntegrationTest
 
         DbContext.Customers.Add(customer);
         await DbContext.SaveChangesAsync();
+        Factory.ProjectServiceClient.SetOwned(sourceProjectId, customer.Id, "PRJ-AUTHORITATIVE-001");
 
         var request = new CreateQuotationRequest
         {
@@ -70,7 +71,7 @@ public class QuotationEndpointsTests : BaseIntegrationTest
         Assert.NotEqual(Guid.Empty, quotationResponse.Id);
         Assert.Equal(customer.Id, quotationResponse.CustomerId);
         Assert.Equal(sourceProjectId, quotationResponse.SourceProjectId);
-        Assert.Equal("PRJ-20260514-001", quotationResponse.SourceProjectNumber);
+        Assert.Equal("PRJ-AUTHORITATIVE-001", quotationResponse.SourceProjectNumber);
         Assert.Equal(QuotationStatus.Draft, quotationResponse.Status);
         Assert.Equal(1, quotationResponse.CurrentVersionNumber);
         Assert.Single(quotationResponse.Versions);
@@ -89,7 +90,7 @@ public class QuotationEndpointsTests : BaseIntegrationTest
 
         Assert.NotNull(savedQuotation);
         Assert.Equal(sourceProjectId, savedQuotation.SourceProjectId);
-        Assert.Equal("PRJ-20260514-001", savedQuotation.SourceProjectNumber);
+        Assert.Equal("PRJ-AUTHORITATIVE-001", savedQuotation.SourceProjectNumber);
         Assert.Single(savedQuotation.Versions);
         Assert.Single(savedQuotation.Versions.First().LineItems);
         Assert.NotNull(savedQuotation.Versions.First().ProjectSnapshotJson);
