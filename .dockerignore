@@ -1,0 +1,28 @@
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/out
+**/TestResults
+**/*.user
+**/*.sln.docstates
+
+# Exclude Specs and Tooling (Constitution X)
+specs/
+.specify/
+.claude/
+.gemini/
+.github/
+
+# Exclude Test projects (Constitution X)
+Maliev.QuotationService.Tests/
+
+# Exclude build artifacts
+**/publish/
+**/artifacts/
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
